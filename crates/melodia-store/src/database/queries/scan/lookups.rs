@@ -4,7 +4,7 @@
 //! resolves hashes in batch via `batch_lookup_by_hash` / the reconcile
 //! pre-pass — there is no per-file hash lookup anymore.
 
-use melodia_core::entities::scan::ExistingTrackSummary;
+use melodia_core::entities::scan::{ExistingTrackSummary, MoveCandidates};
 use melodia_core::error::AppError;
 
 /// Check if a track with the given file path already exists.
@@ -84,6 +84,19 @@ pub async fn get_existing_track_summaries_for_folder(
         out.insert(path, ExistingTrackSummary { file_size: size, date_modified: mtime });
     }
     Ok(out)
+}
+
+/// Every hashed track's size, which is what a scan asks before deciding to hash a file. Library-wide
+/// rather than per folder, a move being free to cross folders.
+pub async fn get_move_candidates(db: &crate::database::DbPool) -> Result<MoveCandidates, AppError> {
+    let sizes = sqlx::query_scalar::<_, Option<i64>>(
+        "SELECT DISTINCT file_size FROM tracks WHERE file_hash IS NOT NULL",
+    )
+    .fetch_all(db.read())
+    .await?;
+
+    let any_unsized = sizes.contains(&None);
+    Ok(MoveCandidates::new(sizes.into_iter().flatten().collect(), any_unsized))
 }
 
 /// Get a track's ID by its file path. Returns None if not found.

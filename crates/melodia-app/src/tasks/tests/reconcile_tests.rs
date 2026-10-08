@@ -251,7 +251,8 @@ async fn a_created_file_matching_a_vanished_row_repoints_it_once() -> Result<(),
 
     let meta = make_test_metadata("Before");
     let vanished = tmp.path().join("from.mp3").to_string_lossy().into_owned();
-    let mut candidates = HashMap::from([(meta.file_hash.clone(), (id, vanished))]);
+    let mut candidates =
+        HashMap::from([(meta.file_hash.clone().unwrap_or_default(), (id, vanished))]);
 
     let moved = tmp.path().join("moved.mp3");
     let twin = tmp.path().join("twin.mp3");
@@ -281,7 +282,8 @@ async fn a_move_out_of_the_watched_tree_leaves_the_candidate_alone() -> Result<(
 
     let meta = make_test_metadata("Before");
     let vanished = music.join("from.mp3").to_string_lossy().into_owned();
-    let mut candidates = HashMap::from([(meta.file_hash.clone(), (id, vanished))]);
+    let mut candidates =
+        HashMap::from([(meta.file_hash.clone().unwrap_or_default(), (id, vanished))]);
 
     let outside = tmp.path().join("outside.mp3");
     let inside = music.join("moved.mp3");
@@ -291,7 +293,7 @@ async fn a_move_out_of_the_watched_tree_leaves_the_candidate_alone() -> Result<(
     let refused = handle_created(&mut tx, &outside, &meta, &mut candidates, &mut names).await?;
     assert!(!refused);
     assert!(
-        candidates.contains_key(&meta.file_hash),
+        meta.file_hash.as_ref().is_some_and(|hash| candidates.contains_key(hash)),
         "refusing a path outside the library must not spend the row's one chance to be found"
     );
 
@@ -405,7 +407,7 @@ async fn a_modify_rewrites_the_hash_in_place() -> Result<(), AppError> {
 
     assert!(changed);
     assert_eq!(track_count(&db).await?, 1, "a re-tag must not fork the row");
-    assert_eq!(track_hash(&db, id).await?, Some(retagged.file_hash));
+    assert_eq!(track_hash(&db, id).await?, retagged.file_hash);
     Ok(())
 }
 

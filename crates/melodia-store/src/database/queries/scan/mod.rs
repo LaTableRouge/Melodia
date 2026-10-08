@@ -17,7 +17,7 @@ mod upserts;
 
 pub use lookups::{
     find_folder_for_path, get_all_track_paths_for_folder, get_existing_track_summaries_for_folder,
-    get_track_id_by_path, track_exists_by_path,
+    get_move_candidates, get_track_id_by_path, track_exists_by_path,
 };
 pub use mutations::{
     INSERT_CHUNK_ROWS, NewTrackRow, delete_track_by_path, delete_tracks_by_paths_batch,

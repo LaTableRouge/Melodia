@@ -1729,6 +1729,10 @@ msgstr "Nén mất dữ liệu"
 msgid "Converted"
 msgstr "Đã chuyển đổi"
 
+#: ui/layout/now-playing-bar.slint
+msgid "Play a random album"
+msgstr "Phát một album ngẫu nhiên"
+
 #. Translators: the action a click takes, expanding the sidebar
 #: ui/layout/sidebar.slint
 msgid "Expand"

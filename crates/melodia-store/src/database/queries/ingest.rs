@@ -124,7 +124,7 @@ pub async fn ingest_scanned_files(
     let new_path_hashes: Vec<&str> = scanned_files
         .iter()
         .filter(|f| !existing_tracks.contains_key(f.path.to_string_lossy().as_ref()))
-        .map(|f| f.metadata.file_hash.as_str())
+        .filter_map(|f| f.metadata.file_hash.as_deref())
         .collect();
     let mut hash_to_existing = batch_lookup_by_hash(tx, &new_path_hashes).await?;
 
@@ -187,9 +187,10 @@ pub async fn ingest_scanned_files(
         // in one scan can't both steal the one existing row — the second
         // falls through to a fresh insert (mirrors `reconcile.rs`'s
         // consume-once moved-candidates map). A failed folder resolution
-        // leaves the entry available for a later same-hash file.
-        if let Some((existing_id, old_path)) =
-            hash_to_existing.get(meta.file_hash.as_str()).cloned()
+        // leaves the entry available for a later same-hash file. An unhashed file was left so
+        // because no hashed row shares its size, so it cannot be a move.
+        if let Some(file_hash) = meta.file_hash.as_deref()
+            && let Some((existing_id, old_path)) = hash_to_existing.get(file_hash).cloned()
             && !existing_old_paths_present.contains(&old_path)
         {
             let Some(folder_id) =
@@ -214,7 +215,7 @@ pub async fn ingest_scanned_files(
                 meta.date_modified.as_deref(),
             )
             .await?;
-            hash_to_existing.remove(meta.file_hash.as_str());
+            hash_to_existing.remove(file_hash);
             log::info!("Detected moved file: {old_path} -> {file_path_str}");
             moved_count += 1;
             continue;

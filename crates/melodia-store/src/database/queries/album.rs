@@ -72,6 +72,28 @@ pub async fn get_all_albums(db: &DbPool) -> Result<Vec<album::AlbumStats>, AppEr
     Ok(albums)
 }
 
+/// An album picked uniformly at random from those holding a track, other than the album of
+/// `playing_track_id`, so a second press never lands where the first did. `None` when no other
+/// album has one.
+///
+/// Uniform over albums rather than over tracks, which would pick a box set far more often than
+/// a single.
+pub async fn random_album_id(
+    db: &DbPool,
+    playing_track_id: Option<i64>,
+) -> Result<Option<i64>, AppError> {
+    let id = sqlx::query_scalar::<_, i64>(
+        "SELECT a.id FROM albums a
+          WHERE EXISTS (SELECT 1 FROM tracks t WHERE t.album_id = a.id)
+            AND a.id IS NOT (SELECT album_id FROM tracks WHERE id = ?)
+          ORDER BY RANDOM() LIMIT 1",
+    )
+    .bind(playing_track_id)
+    .fetch_optional(db.read())
+    .await?;
+    Ok(id)
+}
+
 pub async fn get_album_by_id(db: &DbPool, id: i64) -> Result<album::AlbumStats, AppError> {
     sqlx::query_as::<_, album::AlbumStats>("SELECT * FROM album_stats WHERE id = ?")
         .bind(id)

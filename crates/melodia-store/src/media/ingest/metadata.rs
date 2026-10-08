@@ -12,7 +12,7 @@ use super::{rating_tags, role_tags};
 use melodia_artwork::media::image::artwork;
 use melodia_core::entities::artist::ArtistCredit;
 use melodia_core::entities::genre::GenreList;
-use melodia_core::entities::scan::{ExtractedMetadata, ReleaseTags, SortTags};
+use melodia_core::entities::scan::{ExtractedMetadata, MoveCandidates, ReleaseTags, SortTags};
 use melodia_core::error::AppError;
 
 /// Compute a full BLAKE3 hash of a file (64-char hex string).
@@ -185,6 +185,26 @@ fn parse_r128_gain(s: &str) -> Option<f64> {
     Some(f64::from(q7_8) / 256.0 + R128_TO_REPLAYGAIN_DB)
 }
 
+/// Which files a parse hashes.
+#[derive(Clone, Copy)]
+pub enum Hashing<'a> {
+    /// Every file, for a caller that matches rows by hash on the spot: the watcher pairing a
+    /// delete with a create, an import, and the re-read after a tag write.
+    Always,
+    /// Only a file that could be a move of a hashed row. The rest go in unhashed, and
+    /// `tasks::retroactive_hash` reads them after the scan rather than inside it.
+    IfMoveCandidate(&'a MoveCandidates),
+}
+
+impl Hashing<'_> {
+    fn wants(self, file_size: i64) -> bool {
+        match self {
+            Self::Always => true,
+            Self::IfMoveCandidate(candidates) => candidates.could_be_moved(file_size),
+        }
+    }
+}
+
 /// What [`extract`] does with a file it can hash but whose tags won't parse.
 #[derive(Clone, Copy)]
 enum OnUnreadableTags {
@@ -203,7 +223,7 @@ pub fn extract_metadata(
     cover_cache: &artwork::CoverCache,
     skip_artwork: bool,
 ) -> Result<ExtractedMetadata, AppError> {
-    extract(path, artwork_dir, cover_cache, skip_artwork, OnUnreadableTags::Fail)
+    extract(path, artwork_dir, cover_cache, skip_artwork, Hashing::Always, OnUnreadableTags::Fail)
 }
 
 /// As [`extract_metadata`], but a file whose tags won't parse still yields a row, titled
@@ -213,16 +233,17 @@ pub fn extract_metadata(
 /// For the scan paths, where the alternative is the file disappearing: a container with
 /// no tag reader (Matroska, CAF) and one with tags too broken to parse both arrive here,
 /// and dropping either leaves a file sitting in a watched folder that the library never
-/// mentions. The hash above the parse is what makes this safe to do blind. It reads the
-/// whole file, so anything that gets past it is readable and the parse failure is the
-/// format's, not the disk's.
+/// mentions. The hash is what makes this safe to do blind, so a file whose tags won't parse
+/// is hashed whatever `hashing` says. It reads the whole file, so anything that gets past
+/// it is readable and the parse failure is the format's, not the disk's.
 pub fn extract_or_filename_row(
     path: &Path,
     artwork_dir: &Path,
     cover_cache: &artwork::CoverCache,
     skip_artwork: bool,
+    hashing: Hashing<'_>,
 ) -> Result<ExtractedMetadata, AppError> {
-    extract(path, artwork_dir, cover_cache, skip_artwork, OnUnreadableTags::FilenameRow)
+    extract(path, artwork_dir, cover_cache, skip_artwork, hashing, OnUnreadableTags::FilenameRow)
 }
 
 fn extract(
@@ -230,6 +251,7 @@ fn extract(
     artwork_dir: &Path,
     cover_cache: &artwork::CoverCache,
     skip_artwork: bool,
+    hashing: Hashing<'_>,
     on_unreadable: OnUnreadableTags,
 ) -> Result<ExtractedMetadata, AppError> {
     // Only allocate the fallback name if a tag title is actually missing — for
@@ -246,7 +268,9 @@ fn extract(
     // other caller that already holds one.
     let date_modified = fs_meta.as_ref().ok().and_then(date_modified_from_metadata);
 
-    let file_hash = compute_file_hash(path)?;
+    // A file that won't `stat` is hashed regardless, so it fails here as it always has.
+    let hash_now = fs_meta.is_err() || hashing.wants(file_size);
+    let mut file_hash = if hash_now { Some(compute_file_hash(path)?) } else { None };
 
     let scope = if skip_artwork { TagScope::NoArtwork } else { TagScope::Full };
     let tagged_file = match read_tags(path, scope) {
@@ -254,6 +278,9 @@ fn extract(
         Err(e) => match on_unreadable {
             OnUnreadableTags::Fail => return Err(e),
             OnUnreadableTags::FilenameRow => {
+                if file_hash.is_none() {
+                    file_hash = Some(compute_file_hash(path)?);
+                }
                 log::debug!(
                     "{}; keeping a filename-derived row",
                     melodia_core::error::describe(&e)

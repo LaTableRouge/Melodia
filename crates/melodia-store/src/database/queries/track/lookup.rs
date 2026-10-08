@@ -198,12 +198,21 @@ pub async fn get_track_ids_by_hashes(
     Ok(map)
 }
 
-/// Get all file paths of tracks that have no `file_hash` (for retroactive hashing).
-pub async fn get_unhashed_track_paths(db: &DbPool) -> Result<Vec<(i64, String)>, AppError> {
-    let rows: Vec<(i64, String)> =
-        sqlx::query_as("SELECT id, file_path FROM tracks WHERE file_hash IS NULL")
-            .fetch_all(db.read())
-            .await?;
+/// One page of track paths with no `file_hash`, by ascending id and starting past `after_id`. The
+/// work list for retroactive hashing, paged for [`get_unrated_track_paths_after`]'s reasons: after a
+/// first scan the predicate selects nearly the whole library.
+pub async fn get_unhashed_track_paths_after(
+    db: &DbPool,
+    after_id: i64,
+    limit: i64,
+) -> Result<Vec<(i64, String)>, AppError> {
+    let rows: Vec<(i64, String)> = sqlx::query_as(
+        "SELECT id, file_path FROM tracks WHERE file_hash IS NULL AND id > ? ORDER BY id LIMIT ?",
+    )
+    .bind(after_id)
+    .bind(limit)
+    .fetch_all(db.read())
+    .await?;
     Ok(rows)
 }
 

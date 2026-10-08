@@ -14,13 +14,13 @@ fn make_scanned_file(path: &str, title: &str) -> ScannedFile {
     let mut meta = make_test_metadata(title);
     // Give each file a unique hash derived from path content
     let hash = blake3::hash(path.as_bytes());
-    meta.file_hash = hash.to_hex().to_string();
+    meta.file_hash = Some(hash.to_hex().to_string());
     ScannedFile { path: PathBuf::from(path), metadata: meta }
 }
 
 fn make_scanned_file_with_hash(path: &str, title: &str, hash: &str) -> ScannedFile {
     let mut meta = make_test_metadata(title);
-    meta.file_hash = hash.to_owned();
+    meta.file_hash = Some(hash.to_owned());
     ScannedFile { path: PathBuf::from(path), metadata: meta }
 }
 

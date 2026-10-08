@@ -1740,6 +1740,10 @@ msgstr "Com perdas"
 msgid "Converted"
 msgstr "Convertido"
 
+#: ui/layout/now-playing-bar.slint
+msgid "Play a random album"
+msgstr "Reproduzir um álbum aleatório"
+
 #. Translators: the action a click takes, expanding the sidebar
 #: ui/layout/sidebar.slint
 msgid "Expand"

@@ -11,7 +11,9 @@ use melodia_core::entities::scan::ExtractedMetadata;
 use melodia_core::error::AppResult;
 use melodia_store::database::DbPool;
 use melodia_store::database::queries;
-use melodia_store::media::ingest::metadata::{extract_date_modified, extract_or_filename_row};
+use melodia_store::media::ingest::metadata::{
+    Hashing, extract_date_modified, extract_or_filename_row,
+};
 use melodia_store::media::ingest::scan_pool::ScanPool;
 use melodia_store::media::ingest::watcher::FileEvent;
 
@@ -64,7 +66,13 @@ async fn extract_metadata_batch(
             paths_to_extract
                 .into_par_iter()
                 .filter_map(|path| {
-                    match extract_or_filename_row(&path, &artwork_dir, &cover_cache, false) {
+                    match extract_or_filename_row(
+                        &path,
+                        &artwork_dir,
+                        &cover_cache,
+                        false,
+                        Hashing::Always,
+                    ) {
                         Ok(meta) => Some((path, meta)),
                         // Only an unreadable file gets this far; unparseable tags come back
                         // as a filename-derived row rather than a `None`.
@@ -104,7 +112,7 @@ pub(super) async fn process_batch(
     let hashes_to_check: Vec<String> = events
         .iter()
         .filter_map(|e| match e {
-            FileEvent::Created(path) => metadata_map.get(path).map(|m| m.file_hash.clone()),
+            FileEvent::Created(path) => metadata_map.get(path).and_then(|m| m.file_hash.clone()),
             _ => None,
         })
         .collect();
@@ -282,7 +290,9 @@ async fn handle_created(
     // the entry only on a successful re-point so a failed folder lookup
     // leaves it available to a later same-hash event, matching the old
     // per-event-query behavior.
-    if let Some((existing_id, old_path)) = moved_candidates.get(&meta.file_hash).cloned() {
+    if let Some(file_hash) = meta.file_hash.as_deref()
+        && let Some((existing_id, old_path)) = moved_candidates.get(file_hash).cloned()
+    {
         let Some(folder_id) = queries::scan::find_folder_for_path(tx, &path_str).await? else {
             log::debug!("Moved file not in any library folder, skipping: {}", path.display());
             return Ok(false);
@@ -301,7 +311,7 @@ async fn handle_created(
         )
         .await?;
         if repointed {
-            moved_candidates.remove(&meta.file_hash);
+            moved_candidates.remove(file_hash);
             log::info!("Detected moved file: {old_path} -> {path_str}");
             return Ok(true);
         }
@@ -309,7 +319,7 @@ async fn handle_created(
         // last, so it wasn't one of them; what's left is a scan committing a delete
         // between the pre-transaction candidate read and this write. Drop the dead entry
         // and fall through to a fresh insert.
-        moved_candidates.remove(&meta.file_hash);
+        moved_candidates.remove(file_hash);
     }
 
     let Some(ids) =

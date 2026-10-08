@@ -265,6 +265,11 @@ cargo clippy --all-targets --workspace -- -D warnings    # lint
 cargo test --workspace                                   # tests
 ```
 
+With only Docker on the host, `scripts/dev-container.sh` runs any of the commands above but `cargo
+run` inside the Linux toolchain CI uses, translation and icon-font tooling included; with no
+arguments it opens a shell. The container is headless, so the app itself still runs natively. Give
+Docker 12 GB or more for `cargo test`, whose largest crate peaks near 9 GB to compile.
+
 A source build keeps its own library under `Melodia-dev`, beside an installed copy's folder rather
 than inside it, so a schema migration still on a branch can't leave an installed Melodia unable to
 open its database, and the two can run at once. `MELODIA_DATA_DIR` points either build at a

@@ -137,7 +137,8 @@ fn scan_files_parallel_empty_returns_empty() -> Result<(), AppError> {
     let artwork_dir = tmp.path().join("artwork");
     fs::create_dir(&artwork_dir)?;
 
-    let result = scan_files_parallel(&[], &artwork_dir, &test_cover_cache(), &Unobserved);
+    let result =
+        scan_files_parallel(&[], &artwork_dir, &test_cover_cache(), Hashing::Always, &Unobserved);
     assert!(result.is_empty());
     Ok(())
 }
@@ -156,7 +157,13 @@ fn scan_files_parallel_keeps_a_filename_row_for_unparseable_tags() -> Result<(),
     fs::write(&bad_file, b"not valid audio")?;
 
     let files = vec![bad_file];
-    let result = scan_files_parallel(&files, &artwork_dir, &test_cover_cache(), &Unobserved);
+    let result = scan_files_parallel(
+        &files,
+        &artwork_dir,
+        &test_cover_cache(),
+        Hashing::Always,
+        &Unobserved,
+    );
 
     let [scanned] = result.as_slice() else {
         return Err(AppError::Validation("the unparseable file produced no row".into()));
@@ -177,7 +184,13 @@ fn scan_files_parallel_drops_files_it_cannot_read() -> Result<(), AppError> {
     fs::create_dir(&artwork_dir)?;
 
     let files = vec![tmp.path().join("gone.mp3")];
-    let result = scan_files_parallel(&files, &artwork_dir, &test_cover_cache(), &Unobserved);
+    let result = scan_files_parallel(
+        &files,
+        &artwork_dir,
+        &test_cover_cache(),
+        Hashing::Always,
+        &Unobserved,
+    );
     assert!(result.is_empty());
     Ok(())
 }
@@ -210,7 +223,7 @@ fn scan_files_parallel_reports_progress_to_its_observer() -> Result<(), AppError
     }
 
     let counter = ReadCounter(AtomicU32::new(0));
-    scan_files_parallel(&files, &artwork_dir, &test_cover_cache(), &counter);
+    scan_files_parallel(&files, &artwork_dir, &test_cover_cache(), Hashing::Always, &counter);
 
     // With 10 files, a report fires at file 10 (every 10 files)
     assert!(counter.0.load(Ordering::Relaxed) >= 1);
@@ -277,7 +290,13 @@ fn a_cancelled_parse_reads_nothing() -> Result<(), AppError> {
     let file = tmp.path().join("unread.mp3");
     fs::write(&file, b"not valid audio")?;
 
-    let result = scan_files_parallel(&[file], &artwork_dir, &test_cover_cache(), &Cancelled);
+    let result = scan_files_parallel(
+        &[file],
+        &artwork_dir,
+        &test_cover_cache(),
+        Hashing::Always,
+        &Cancelled,
+    );
 
     assert!(result.is_empty());
     Ok(())
