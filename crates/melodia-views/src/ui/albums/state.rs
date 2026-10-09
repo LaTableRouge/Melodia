@@ -18,7 +18,7 @@ use melodia_core::entities::track::TrackListRow as RsTrackListRow;
 pub(super) struct AlbumSortKey {
     pub name_lc: String,
     pub artist_lc: String,
-    /// RFC 3339, so it sorts lexically; empty for an album the store had no date for.
+    /// Earliest track file mtime, RFC 3339; empty when the store had none.
     pub date_added: String,
 }
 

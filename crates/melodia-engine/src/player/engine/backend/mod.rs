@@ -261,7 +261,15 @@ impl PlaybackEngine {
         start_position_ms: Option<u64>,
         baked_rg: TrackReplayGain,
     ) -> Result<(), AppError> {
+        let deck_busy = self.active_deck_busy();
         let fade_ms = self.manual_fade_ms(start_position_ms);
+
+        // Silenced before the open rather than at the cut: on a cold or busy disk the open takes
+        // seconds, and the outgoing track playing through them reads as a skip that didn't happen.
+        // Manual crossfade included — the fade starts after the file is ready, not while it decodes.
+        if deck_busy {
+            self.lock_decks().pause_all();
+        }
 
         // Decode outside the deck lock — the position monitor's `query_position`
         // shares this mutex, so a synchronous Symphonia probe under it stalls
@@ -289,6 +297,10 @@ impl PlaybackEngine {
 
         // A manual fade is never asked for with a resume position, so the two can't both apply.
         let entry = if fade_ms > 0 { Entry::Fade(fade_ms) } else { Entry::Cut(start) };
+        if fade_ms > 0 && deck_busy {
+            // `pause_all` above stopped the pull; the crossfade ramps need both decks running again.
+            self.lock_decks().play_all();
+        }
         self.start_track(decoded, baked_rg, entry, volume, speed);
         Ok(())
     }
