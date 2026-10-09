@@ -3,6 +3,8 @@
 //! takes `&AppState` and returns `Result<_, AppError>`; the UI bridge
 //! (`melodia-views`' `ui/albums/`) does the in-memory sorting / filtering / chunking.
 
+use std::collections::HashMap;
+
 use crate::state::AppState;
 use melodia_core::entities::{album, track};
 use melodia_core::error::AppError;
@@ -13,6 +15,12 @@ use melodia_store::database::queries;
 /// this is fetched once and cached UI-side.
 pub async fn get_albums(state: &AppState) -> Result<Vec<album::AlbumStats>, AppError> {
     queries::album::get_all_albums(&state.db).await
+}
+
+/// When each album last gained a track, for the grid's date-added sort. Kept out of
+/// `AlbumStats` so the view every other album query reads stays as it is.
+pub async fn get_album_dates_added(state: &AppState) -> Result<HashMap<i64, String>, AppError> {
+    queries::album::get_album_dates_added(&state.db).await
 }
 
 /// Stats for a single album, or `AppError::NotFound` if the id is gone

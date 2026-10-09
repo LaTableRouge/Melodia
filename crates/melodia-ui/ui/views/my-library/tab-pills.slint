@@ -55,8 +55,8 @@ export component MyLibraryTabPills inherits Rectangle {
         // so a Rust-seeded array renders untranslated — and `fields` is the parallel list
         // of tokens the comparator matches on.
         if MyLibrary.tab-idx == MyLibrary.tab-albums && !root.album-open: SortPillRow {
-            labels: [@tr("Name"), @tr("Year"), @tr("Artist")];
-            fields: ["name", "year", "artist"];
+            labels: [@tr("Name"), @tr("Year"), @tr("Artist"), @tr("Date added")];
+            fields: ["name", "year", "artist", "date_added"];
             sort-field: Albums.sort-field;
             sort-dir: Albums.sort-dir;
             request-sort(f) => { Albums.request-sort(f); }

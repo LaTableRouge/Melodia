@@ -26,8 +26,11 @@ pub async fn fetch_grid(
     albums_ui: &Arc<AlbumsUi>,
     weak: Weak<AppWindow>,
 ) -> AppResult<()> {
-    let albums = library::albums::get_albums(state).await?;
-    let data = Arc::new(GridData::new(albums));
+    let (albums, dates_added) = tokio::try_join!(
+        library::albums::get_albums(state),
+        library::albums::get_album_dates_added(state),
+    )?;
+    let data = Arc::new(GridData::with_dates_added(albums, dates_added));
     // Serialize against `AlbumsUi::release_section_state`'s wipe via the
     // shared section gate. Without this serialization, a fast leave→
     // re-enter could let the wipe land *between* this fresh-data write and
@@ -152,6 +155,9 @@ fn sort_album_indices(indices: &mut [usize], data: &GridData, field: &str, dir: 
         }),
         "artist" => indices.sort_by_cached_key(|&i| {
             (data.keys[i].artist_lc.as_str(), data.keys[i].name_lc.as_str())
+        }),
+        "date_added" => indices.sort_by_cached_key(|&i| {
+            (data.keys[i].date_added.as_str(), data.keys[i].name_lc.as_str())
         }),
         _ => indices.sort_by_cached_key(|&i| data.keys[i].name_lc.as_str()),
     }

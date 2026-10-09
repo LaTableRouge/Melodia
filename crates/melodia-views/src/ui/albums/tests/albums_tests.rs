@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use super::*;
 
 /// Minimal `AlbumStats` builder — only the fields the grid filter / sort
@@ -100,6 +102,27 @@ fn compute_indices_year_sort_breaks_ties_by_name_and_honours_dir() {
     assert_eq!(names(&data, &asc), ["AlsoEarlier", "Earlier", "Later"]);
     let desc = compute_indices(&data, "year", "desc", "");
     assert_eq!(names(&data, &desc), ["Later", "Earlier", "AlsoEarlier"]);
+}
+
+/// An album the store gave no date sorts as the oldest, so a newest-first sort never opens on one.
+#[test]
+fn compute_indices_date_added_sort_puts_an_undated_album_oldest() {
+    let dates = HashMap::from([
+        (1, "2024-03-01T10:00:00+00:00".to_owned()),
+        (2, "2025-01-15T08:30:00+00:00".to_owned()),
+    ]);
+    let data = GridData::with_dates_added(
+        vec![
+            album(1, "Older", "X", None),
+            album(2, "Newer", "X", None),
+            album(3, "Undated", "X", None),
+        ],
+        dates,
+    );
+    let asc = compute_indices(&data, "date_added", "asc", "");
+    assert_eq!(names(&data, &asc), ["Undated", "Older", "Newer"]);
+    let desc = compute_indices(&data, "date_added", "desc", "");
+    assert_eq!(names(&data, &desc), ["Newer", "Older", "Undated"]);
 }
 
 #[test]

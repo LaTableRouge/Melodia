@@ -438,6 +438,7 @@ msgid "Skips"
 msgstr "Übersprungen"
 
 #: ui/components/dialog/smart-playlist-editor-body.slint
+#: ui/views/my-library/tab-pills.slint
 msgid "Date added"
 msgstr "Hinzugefügt am"
 
@@ -1740,6 +1741,10 @@ msgstr "Verlustbehaftet"
 #: ui/globals/signal-path.slint
 msgid "Converted"
 msgstr "Umgewandelt"
+
+#: ui/layout/now-playing-bar.slint
+msgid "Play a random album"
+msgstr "Zufälliges Album abspielen"
 
 #. Translators: the action a click takes, expanding the sidebar
 #: ui/layout/sidebar.slint

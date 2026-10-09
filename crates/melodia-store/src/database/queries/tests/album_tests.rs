@@ -46,6 +46,72 @@ async fn get_albums_by_artist() -> Result<(), AppError> {
     Ok(())
 }
 
+async fn album_id_named(db: &DbPool, name: &str) -> Result<i64, AppError> {
+    Ok(sqlx::query_scalar("SELECT id FROM albums WHERE name = ?")
+        .bind(name)
+        .fetch_one(db.read())
+        .await?)
+}
+
+async fn a_track_on(db: &DbPool, album_id: i64) -> Result<i64, AppError> {
+    Ok(sqlx::query_scalar("SELECT id FROM tracks WHERE album_id = ? LIMIT 1")
+        .bind(album_id)
+        .fetch_one(db.read())
+        .await?)
+}
+
+/// With two albums, the one not playing is the only answer, so a pick that could land back on
+/// the playing album would fail this within a few presses.
+#[tokio::test]
+async fn random_album_id_never_picks_the_playing_album() -> Result<(), AppError> {
+    let db = setup_seeded_db().await?;
+    let one = album_id_named(&db, "Album One").await?;
+    let two = album_id_named(&db, "Album Two").await?;
+    let playing = a_track_on(&db, one).await?;
+
+    for _ in 0..16 {
+        assert_eq!(queries::album::random_album_id(&db, Some(playing)).await?, Some(two));
+    }
+    Ok(())
+}
+
+/// An album row outlives its last track until the orphan purge runs, and picking one plays nothing.
+#[tokio::test]
+async fn random_album_id_skips_an_album_with_no_tracks() -> Result<(), AppError> {
+    let db = setup_seeded_db().await?;
+    let one = album_id_named(&db, "Album One").await?;
+    let two = album_id_named(&db, "Album Two").await?;
+    sqlx::query("DELETE FROM tracks WHERE album_id = ?").bind(two).execute(db.write()).await?;
+    let playing = a_track_on(&db, one).await?;
+
+    assert_eq!(queries::album::random_album_id(&db, Some(playing)).await?, None);
+    assert_eq!(queries::album::random_album_id(&db, None).await?, Some(one), "nothing playing");
+    Ok(())
+}
+
+/// An album's date is its newest track's, so a track added to an old album brings it back to the
+/// top of a newest-first sort.
+#[tokio::test]
+async fn get_album_dates_added_takes_the_newest_track() -> Result<(), AppError> {
+    let db = setup_seeded_db().await?;
+    let one = album_id_named(&db, "Album One").await?;
+    let two = album_id_named(&db, "Album Two").await?;
+    sqlx::query("UPDATE tracks SET date_added = '2020-01-01T00:00:00+00:00'")
+        .execute(db.write())
+        .await?;
+    let newest = a_track_on(&db, one).await?;
+    sqlx::query("UPDATE tracks SET date_added = '2025-06-01T00:00:00+00:00' WHERE id = ?")
+        .bind(newest)
+        .execute(db.write())
+        .await?;
+
+    let dates = queries::album::get_album_dates_added(&db).await?;
+
+    assert_eq!(dates.get(&one).map(String::as_str), Some("2025-06-01T00:00:00+00:00"));
+    assert_eq!(dates.get(&two).map(String::as_str), Some("2020-01-01T00:00:00+00:00"));
+    Ok(())
+}
+
 #[tokio::test]
 async fn get_all_albums_track_counts() -> Result<(), AppError> {
     let db = setup_seeded_db().await?;

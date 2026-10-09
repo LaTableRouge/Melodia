@@ -1,7 +1,7 @@
 //! Internal data structures + constants used by the Albums grid and
 //! Album Detail submodules.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use parking_lot::Mutex;
@@ -10,7 +10,7 @@ use crate::ui::row_match::Needle;
 use melodia_core::entities::album::AlbumStats;
 use melodia_core::entities::track::TrackListRow as RsTrackListRow;
 
-/// An album's pre-lowercased name + artist, computed once per `fetch_grid`
+/// An album's pre-lowercased name + artist and its date added, computed once per `fetch_grid`
 /// so the name / artist sorts allocate nothing. Positionally aligned with
 /// [`GridData::albums`]. The filter doesn't read it — it walks the raw
 /// fields through `ui::row_match`, which has to fold accents and so can't
@@ -18,6 +18,8 @@ use melodia_core::entities::track::TrackListRow as RsTrackListRow;
 pub(super) struct AlbumSortKey {
     pub name_lc: String,
     pub artist_lc: String,
+    /// RFC 3339, so it sorts lexically; empty for an album the store had no date for.
+    pub date_added: String,
 }
 
 /// The grid's canonical data: the album list plus its pre-lowercased
@@ -32,11 +34,20 @@ impl GridData {
     /// Build the keys alongside the albums. Runs on a tokio worker (inside
     /// `fetch_grid`), never on the UI thread.
     pub(super) fn new(albums: Vec<AlbumStats>) -> Self {
+        Self::with_dates_added(albums, HashMap::new())
+    }
+
+    /// [`Self::new`] carrying each album's date added, keyed by album id.
+    pub(super) fn with_dates_added(
+        albums: Vec<AlbumStats>,
+        mut dates_added: HashMap<i64, String>,
+    ) -> Self {
         let keys = albums
             .iter()
             .map(|a| AlbumSortKey {
                 name_lc: a.name.to_lowercase(),
                 artist_lc: a.artist_name.to_lowercase(),
+                date_added: dates_added.remove(&a.id).unwrap_or_default(),
             })
             .collect();
         Self { albums, keys }
