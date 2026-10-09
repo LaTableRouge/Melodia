@@ -466,7 +466,7 @@ async fn resolve_ids(
     } else if let Some(&id) =
         caches.album.get(album_name).and_then(|by_artist| by_artist.get(&album_artist_id))
     {
-        Some(id)
+        id
     } else {
         let album_credit = queries::scan::album_credit_for(meta);
         let id = queries::scan::upsert_album(

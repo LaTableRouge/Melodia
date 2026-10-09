@@ -464,7 +464,7 @@ pub async fn resolve_album_for_track(
     folder_id: i64,
     meta: &ExtractedMetadata,
     track_artist_id: i64,
-    folder_cache: Option<&mut AlbumFolderCache>,
+    mut folder_cache: Option<&mut AlbumFolderCache>,
     names: &mut NameCache,
 ) -> Result<Option<i64>, AppError> {
     if album_name.is_empty() {

@@ -193,7 +193,7 @@ pub async fn consolidate_split_albums_in_folders(
 
     let mut retired = 0u32;
     for (name, year, folder_id) in groups {
-        let mut rows = sqlx::query_as::<_, (i64, i64)>(
+        let rows = sqlx::query_as::<_, (i64, i64)>(
             "SELECT al.id, COUNT(t.id) AS track_count
              FROM albums al
              JOIN tracks t ON t.album_id = al.id AND t.folder_id = ?
