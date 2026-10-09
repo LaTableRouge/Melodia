@@ -28,7 +28,8 @@ pub use mutations::{
 pub use name_cache::NameCache;
 pub use sort_key::to_natural_sort_key;
 pub use upserts::{
-    CreditDetails, album_artist_name_for, album_credit_for, upsert_album, upsert_artist,
+    AlbumFolderCache, CreditDetails, album_artist_name_for, album_credit_for,
+    promote_album_to_various_artists, resolve_album_for_track, upsert_album, upsert_artist,
     upsert_genre,
 };
 
@@ -72,15 +73,16 @@ pub async fn resolve_track_context(
     // Group the album by its album-artist (falling back to the track artist when no
     // album-artist tag is present) so a per-track featured credit ("X & Y") doesn't
     // split the album into a second row.
-    let album_artist_name = album_artist_name_for(meta);
-    let album_artist_id = if album_artist_name == artist_name {
-        artist_id
-    } else {
-        names.artist(tx, album_artist_name, 1).await?
-    };
-    let album_credit = album_credit_for(meta);
-    let album_id =
-        upsert_album(tx, album_name, album_artist_id, &album_credit, meta, names).await?;
+    let album_id = resolve_album_for_track(
+        tx,
+        album_name,
+        folder_id,
+        meta,
+        artist_id,
+        None,
+        names,
+    )
+    .await?;
     let genre_id = names.genre(tx, genre_name).await?;
 
     Ok(Some(ResolvedIds { artist_id, album_id, genre_id, folder_id }))

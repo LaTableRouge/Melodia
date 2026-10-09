@@ -48,6 +48,7 @@ struct ExistingTrackInfo {
 struct ResolveCaches {
     names: NameCache,
     album: HashMap<String, HashMap<i64, Option<i64>>>,
+    album_folder: queries::scan::AlbumFolderCache,
     folder: HashMap<String, i64>,
 }
 
@@ -56,6 +57,7 @@ impl ResolveCaches {
         Self {
             names: NameCache::for_chunk(estimated),
             album: HashMap::with_capacity(estimated / 8 + 1),
+            album_folder: queries::scan::AlbumFolderCache::default(),
             folder: HashMap::with_capacity(estimated / 20 + 1),
         }
     }
@@ -441,23 +443,31 @@ async fn resolve_ids(
 
     let artist_id = caches.names.artist(tx, artist_name, UNKNOWN_ARTIST_ID).await?;
 
-    // The album-artist (album_artist tag, else the track artist). The album groups by this, so a
-    // per-track featured credit doesn't split it.
     let album_artist_name = queries::scan::album_artist_name_for(meta);
     let album_artist_id = if album_artist_name == artist_name {
         artist_id
+    } else if album_artist_name.is_empty() {
+        UNKNOWN_ARTIST_ID
     } else {
         caches.names.artist(tx, album_artist_name, UNKNOWN_ARTIST_ID).await?
     };
 
-    // Resolve album (two-level cache, keyed on the album-artist)
-    let album_id = if let Some(&id) =
+    let album_id = if meta.album_artist.is_empty() {
+        queries::scan::resolve_album_for_track(
+            tx,
+            album_name,
+            folder_id,
+            meta,
+            artist_id,
+            Some(&mut caches.album_folder),
+            &mut caches.names,
+        )
+        .await?
+    } else if let Some(&id) =
         caches.album.get(album_name).and_then(|by_artist| by_artist.get(&album_artist_id))
     {
-        id
+        Some(id)
     } else {
-        // Behind the cache miss deliberately: an album's credit is a property of the album, so
-        // rewriting it per *track* would cost a delete-and-insert cycle per row of a bulk scan.
         let album_credit = queries::scan::album_credit_for(meta);
         let id = queries::scan::upsert_album(
             tx,

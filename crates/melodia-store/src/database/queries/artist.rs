@@ -25,6 +25,9 @@ pub async fn get_artist_by_id(db: &DbPool, id: i64) -> Result<artist::ArtistStat
 /// answers with a stranger's photo, drawn under every untagged track.
 pub const UNKNOWN_ARTIST_ID: i64 = 1;
 
+/// The album-artist name compilations and split soundtracks file under when no tag says otherwise.
+pub const VARIOUS_ARTISTS_NAME: &str = "Various Artists";
+
 /// The artists an image fetch should look up, the [`UNKNOWN_ARTIST_ID`] placeholder excluded.
 pub async fn get_artists_without_images(db: &DbPool) -> Result<Vec<artist::Artist>, AppError> {
     let artists = sqlx::query_as::<_, artist::Artist>(

@@ -774,6 +774,16 @@ fn an_album_files_under_the_primary_name_and_not_the_whole_credit() {
     assert_eq!(queries::scan::album_credit_for(&meta).line(), Some("Alice"));
 }
 
+#[test]
+fn a_compilation_without_an_album_artist_tag_files_under_various_artists() {
+    let mut meta = make_test_metadata("One");
+    meta.artist = ArtistCredit::from_name("Alice");
+    meta.release.is_compilation = true;
+
+    assert_eq!(queries::scan::album_artist_name_for(&meta), "Various Artists");
+    assert_eq!(queries::scan::album_credit_for(&meta).line(), Some("Various Artists"));
+}
+
 /// Its own tag wins where there is one, which is what keeps a compilation together.
 #[test]
 fn an_album_artist_tag_outranks_the_track_credit() {
@@ -783,6 +793,37 @@ fn an_album_artist_tag_outranks_the_track_credit() {
 
     assert_eq!(queries::scan::album_artist_name_for(&meta), "Various Artists");
     assert_eq!(queries::scan::album_credit_for(&meta).line(), Some("Various Artists"));
+}
+
+#[tokio::test]
+async fn a_multi_performer_release_in_one_folder_stays_one_album() -> Result<(), AppError> {
+    let db = DbPool::test_pool().await?;
+    queries::folder::insert_folder(&db, "/music", true).await?;
+
+    let mut first = make_test_metadata("One");
+    first.album = Some("Game OST".to_owned());
+    first.year = Some(2002);
+    first.artist = ArtistCredit::from_name("Artist A");
+    insert_tagged_track(&db, "/music/01.mp3", &first).await?;
+
+    let mut second = make_test_metadata("Two");
+    second.album = Some("Game OST".to_owned());
+    second.year = Some(2002);
+    second.artist = ArtistCredit::from_name("Artist B");
+    insert_tagged_track(&db, "/music/02.mp3", &second).await?;
+
+    let count: (i64,) =
+        sqlx::query_as("SELECT COUNT(*) FROM albums WHERE name = 'Game OST'").fetch_one(db.read()).await?;
+    assert_eq!(count.0, 1);
+
+    let artist: (String,) = sqlx::query_as(
+        "SELECT a.name FROM albums al \
+         JOIN artists a ON a.id = al.artist_id WHERE al.name = 'Game OST'",
+    )
+    .fetch_one(db.read())
+    .await?;
+    assert_eq!(artist.0, "Various Artists");
+    Ok(())
 }
 
 #[test]

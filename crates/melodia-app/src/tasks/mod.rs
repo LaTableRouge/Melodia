@@ -6,6 +6,7 @@
 //! live in this directory directly; a handful still delegate into
 //! `player/` for state-machine-coupled work.
 
+pub mod album_consolidate;
 pub mod artwork_renormalize;
 pub mod artwork_restore;
 pub mod artwork_sweep;

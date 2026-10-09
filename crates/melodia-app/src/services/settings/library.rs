@@ -48,6 +48,8 @@ pub struct LibraryFlags {
     /// the reader gained since is in the files, and `scanner::track_is_current` will never re-read
     /// them on its own.
     pub tags_backfilled: bool,
+    /// Whether albums split by per-track performers (no album-artist tag) have been merged once.
+    pub albums_consolidated_by_folder: bool,
 }
 
 impl Default for LibraryFlags {
@@ -58,6 +60,7 @@ impl Default for LibraryFlags {
             write_ratings_to_tags: true,
             ratings_imported_from_tags: false,
             tags_backfilled: false,
+            albums_consolidated_by_folder: false,
         }
     }
 }
