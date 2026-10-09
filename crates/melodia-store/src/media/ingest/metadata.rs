@@ -1,4 +1,5 @@
 use std::io::Read;
+use std::ops::ControlFlow;
 use std::path::Path;
 use std::time::UNIX_EPOCH;
 
@@ -26,6 +27,36 @@ pub fn compute_file_hash(path: &Path) -> Result<String, AppError> {
         .update_reader(&mut file)
         .map_err(|e| AppError::metadata(format!("Failed to hash {}", path.display()), e))?;
     Ok(hasher.finalize().to_hex().to_string())
+}
+
+/// [`compute_file_hash`], calling `between_chunks` after every `chunk_bytes` read, so a caller can
+/// space out a read it doesn't want competing with playback for the disk. Same digest, or `None`
+/// once `between_chunks` breaks.
+pub fn compute_file_hash_paced(
+    path: &Path,
+    chunk_bytes: usize,
+    mut between_chunks: impl FnMut() -> ControlFlow<()>,
+) -> Result<Option<String>, AppError> {
+    let mut file = std::fs::File::open(path).map_err(|e| {
+        AppError::metadata(format!("Failed to open {} for hashing", path.display()), e)
+    })?;
+    let mut hasher = blake3::Hasher::new();
+    let mut buf = vec![0; chunk_bytes];
+    loop {
+        let read = match file.read(&mut buf) {
+            Ok(0) => break,
+            Ok(read) => read,
+            Err(e) if e.kind() == std::io::ErrorKind::Interrupted => continue,
+            Err(e) => {
+                return Err(AppError::metadata(format!("Failed to hash {}", path.display()), e));
+            }
+        };
+        hasher.update(&buf[..read]);
+        if between_chunks().is_break() {
+            return Ok(None);
+        }
+    }
+    Ok(Some(hasher.finalize().to_hex().to_string()))
 }
 
 /// Format an already-fetched `Metadata`'s modification time as an RFC 3339

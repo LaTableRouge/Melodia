@@ -768,3 +768,34 @@ fn an_opus_header_stating_no_channels_is_refused_rather_than_panicking() {
     let refused = read_tags(&assets_dir().join("silence-zero-channels.opus"), TagScope::Full);
     assert!(refused.is_err(), "a zero-channel Opus header has to come back an error");
 }
+
+/// The paced read feeds the hasher in pieces, and the digest is what every stored hash is
+/// matched against, so a chunk boundary that dropped or repeated a byte would turn every move the
+/// backfill hashed into a re-import.
+#[test]
+fn a_paced_hash_matches_the_one_read_at_once() -> Result<(), AppError> {
+    let tmp = TempDir::new()?;
+    let path = tmp.path().join("song.flac");
+    let bytes: Vec<u8> = (0..=250u8).cycle().take(10_000).collect();
+    std::fs::write(&path, &bytes)?;
+
+    let mut chunks = 0;
+    let paced = compute_file_hash_paced(&path, 4096, || {
+        chunks += 1;
+        ControlFlow::Continue(())
+    })?;
+
+    assert_eq!(paced, Some(compute_file_hash(&path)?));
+    assert_eq!(chunks, 3, "10 000 bytes in 4 096-byte reads");
+    Ok(())
+}
+
+#[test]
+fn a_paced_hash_told_to_stop_answers_none() -> Result<(), AppError> {
+    let tmp = TempDir::new()?;
+    let path = tmp.path().join("song.flac");
+    std::fs::write(&path, [0u8; 64])?;
+
+    assert_eq!(compute_file_hash_paced(&path, 16, || ControlFlow::Break(()))?, None);
+    Ok(())
+}

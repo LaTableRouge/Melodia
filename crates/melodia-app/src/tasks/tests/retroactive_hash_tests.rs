@@ -6,6 +6,8 @@
 //! in noticing, `tracks.id` being a bare `INTEGER PRIMARY KEY` that an insert will happily re-use.
 
 use std::collections::HashMap;
+use std::sync::Arc;
+use std::sync::atomic::AtomicUsize;
 
 use tempfile::TempDir;
 use tokio_util::sync::CancellationToken;
@@ -47,8 +49,8 @@ async fn hash_of(db: &DbPool, name: &str) -> Result<Option<String>, AppError> {
     Ok(rows(db).await?.get(name).and_then(|(hash, _)| hash.clone()))
 }
 
-/// Each row has to get the hash of the file *it* names. The pass hashes in parallel and writes
-/// back as `(id, hash, mtime)` tuples, so a pairing that slips is invisible in the column — every
+/// Each row has to get the hash of the file *it* names. The pass writes back as
+/// `(id, hash, mtime)` tuples, so a pairing that slips is invisible in the column — every
 /// row is populated and every value is a real hash — and turns the next move into a re-import.
 #[tokio::test]
 async fn an_unhashed_row_gets_the_hash_of_its_own_file() -> Result<(), AppError> {
@@ -59,7 +61,7 @@ async fn an_unhashed_row_gets_the_hash_of_its_own_file() -> Result<(), AppError>
     ])
     .await?;
 
-    hash_unhashed_tracks(&db, &CancellationToken::new(), PAGE_ROWS).await?;
+    hash_unhashed_tracks(&db, &CancellationToken::new(), PAGE_ROWS, &|| false).await?;
 
     let first = hash_of(&db, "first.mp3").await?;
     let third = hash_of(&db, "third.mp3").await?;
@@ -76,22 +78,22 @@ async fn an_unhashed_row_gets_the_hash_of_its_own_file() -> Result<(), AppError>
 async fn the_backfilled_mtime_comes_off_the_file() -> Result<(), AppError> {
     let (db, _tmp) = library(&[("song.mp3", b"bytes")]).await?;
 
-    hash_unhashed_tracks(&db, &CancellationToken::new(), PAGE_ROWS).await?;
+    hash_unhashed_tracks(&db, &CancellationToken::new(), PAGE_ROWS, &|| false).await?;
 
     let mtime = rows(&db).await?.get("song.mp3").and_then(|(_, mtime)| mtime.clone());
     assert_ne!(mtime.as_deref(), Some(STALE_MTIME), "the row kept the mtime it was seeded with");
     Ok(())
 }
 
-/// A library always has a few rows whose files have moved or gone. Each page is one parallel walk
-/// and one batch update, so a missing file that took the batch down with it would leave every
+/// A library always has a few rows whose files have moved or gone. Each page is one walk and one
+/// batch update, so a missing file that took the batch down with it would leave every
 /// other row on the page unhashed too.
 #[tokio::test]
 async fn a_row_whose_file_is_gone_does_not_cost_its_neighbour_a_hash() -> Result<(), AppError> {
     let (db, tmp) = library(&[("present.mp3", b"bytes"), ("gone.mp3", b"bytes")]).await?;
     std::fs::remove_file(tmp.path().join("gone.mp3"))?;
 
-    hash_unhashed_tracks(&db, &CancellationToken::new(), PAGE_ROWS).await?;
+    hash_unhashed_tracks(&db, &CancellationToken::new(), PAGE_ROWS, &|| false).await?;
 
     assert!(hash_of(&db, "present.mp3").await?.is_some(), "a file that is there must be hashed");
     assert_eq!(hash_of(&db, "gone.mp3").await?, None, "and one that is not stays unanswered");
@@ -105,7 +107,7 @@ async fn a_row_that_already_has_a_hash_is_left_alone() -> Result<(), AppError> {
     let (db, _tmp) = library(&[("song.mp3", b"bytes")]).await?;
     sqlx::query("UPDATE tracks SET file_hash = 'from an earlier pass'").execute(db.write()).await?;
 
-    hash_unhashed_tracks(&db, &CancellationToken::new(), PAGE_ROWS).await?;
+    hash_unhashed_tracks(&db, &CancellationToken::new(), PAGE_ROWS, &|| false).await?;
 
     let row = rows(&db).await?;
     let (hash, mtime) = row.get("song.mp3").ok_or_else(|| AppError::NotFound("song.mp3".into()))?;
@@ -122,7 +124,7 @@ async fn the_pass_walks_every_page_past_a_file_that_is_gone() -> Result<(), AppE
         library(&[("gone.mp3", b"one"), ("second.mp3", b"two"), ("third.mp3", b"three")]).await?;
     std::fs::remove_file(tmp.path().join("gone.mp3"))?;
 
-    let hashed = hash_unhashed_tracks(&db, &CancellationToken::new(), 1).await?;
+    let hashed = hash_unhashed_tracks(&db, &CancellationToken::new(), 1, &|| false).await?;
 
     assert_eq!(hashed, 2, "every file still there is hashed, one page at a time");
     assert!(hash_of(&db, "third.mp3").await?.is_some(), "the last page is reached");
@@ -137,9 +139,31 @@ async fn a_pass_started_after_shutdown_reads_nothing() -> Result<(), AppError> {
     let shutdown = CancellationToken::new();
     shutdown.cancel();
 
-    let hashed = hash_unhashed_tracks(&db, &shutdown, PAGE_ROWS).await?;
+    let hashed = hash_unhashed_tracks(&db, &shutdown, PAGE_ROWS, &|| false).await?;
 
     assert_eq!(hashed, 0);
     assert_eq!(hash_of(&db, "song.mp3").await?, None, "the row is left for the next launch");
+    Ok(())
+}
+
+/// Pacing while music plays slows the pass and must not stop it: a user who always has something
+/// on would otherwise never get a library hashed.
+#[tokio::test]
+async fn a_pass_while_music_plays_asks_after_every_chunk_and_still_finishes() -> Result<(), AppError>
+{
+    let (db, _tmp) = library(&[("first.mp3", b"one"), ("second.mp3", b"two")]).await?;
+    let asked = Arc::new(AtomicUsize::new(0));
+    let playing = {
+        let asked = asked.clone();
+        move || {
+            asked.fetch_add(1, Ordering::Relaxed);
+            true
+        }
+    };
+
+    let hashed = hash_unhashed_tracks(&db, &CancellationToken::new(), PAGE_ROWS, &playing).await?;
+
+    assert_eq!(hashed, 2);
+    assert_eq!(asked.load(Ordering::Relaxed), 2, "one chunk per file, one question per chunk");
     Ok(())
 }
