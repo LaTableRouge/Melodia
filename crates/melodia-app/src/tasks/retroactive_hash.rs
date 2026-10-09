@@ -6,22 +6,36 @@
 //! hours on a spinning disk. So the pass commits a page at a time and stops at shutdown, the next
 //! launch resuming at whatever is still NULL, and only one runs at once: boot and every completed
 //! scan both spawn it, and two passes over the same rows would read every file twice.
+//!
+//! It runs for hours while the user listens, so it reads one file at a time and paces itself while
+//! anything plays. A parallel pass at full speed takes every core and the disk's whole queue, and
+//! the decoder, reading the playing file off the same disk, starves: playback stutters.
 
+use std::ops::ControlFlow;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::Duration;
 
 use tokio_util::sync::CancellationToken;
 
 use crate::state::AppState;
 use crate::tasks::TaskSpawner;
 use melodia_core::error::AppResult;
+use melodia_engine::player::engine::types::PlaybackStatus;
 use melodia_store::database::DbPool;
 use melodia_store::database::queries;
-use melodia_store::media::ingest::scan_pool::ScanPool;
+use melodia_store::media::ingest::metadata;
 
 /// Rows hashed and committed together: the most a quit or a crash costs, and the paths resident at
 /// once.
 const PAGE_ROWS: i64 = 256;
+
+/// One read between pauses.
+const CHUNK_BYTES: usize = 1 << 20;
+
+/// The pause after each chunk while music plays, holding the pass to about 10 MiB/s: a small
+/// fraction of any disk, and still a 30 MB FLAC every few seconds.
+const PLAYING_PAUSE: Duration = Duration::from_millis(100);
 
 /// Whether a pass is running.
 static RUNNING: AtomicBool = AtomicBool::new(false);
@@ -35,10 +49,13 @@ pub fn spawn(spawner: &TaskSpawner, state: &AppState) {
         return;
     }
     let db = state.db.clone();
+    let player_state = state.player_state.clone();
+    let playing =
+        move || player_state.status_atomic.load(Ordering::Relaxed) == PlaybackStatus::Playing as u8;
     spawner.spawn_cancellable(|shutdown| async move {
         loop {
             while !shutdown.is_cancelled() && REQUESTED.swap(false, Ordering::SeqCst) {
-                if let Err(e) = hash_unhashed_tracks(&db, &shutdown, PAGE_ROWS).await {
+                if let Err(e) = hash_unhashed_tracks(&db, &shutdown, PAGE_ROWS, &playing).await {
                     log::warn!("Background hashing failed: {}", melodia_core::error::describe(&e));
                 }
             }
@@ -56,11 +73,15 @@ pub fn spawn(spawner: &TaskSpawner, state: &AppState) {
 ///
 /// Keyset by id, so a row whose file is gone, and stays NULL, is stepped over rather than handed
 /// back on every page. `page_rows` is a parameter so a test can reach a second page at all.
-async fn hash_unhashed_tracks(
+async fn hash_unhashed_tracks<P>(
     db: &DbPool,
     shutdown: &CancellationToken,
     page_rows: i64,
-) -> AppResult<usize> {
+    playing: &P,
+) -> AppResult<usize>
+where
+    P: Fn() -> bool + Clone + Send + Sync + 'static,
+{
     let mut after_id = 0;
     let mut hashed = 0;
 
@@ -75,11 +96,10 @@ async fn hash_unhashed_tracks(
         after_id = last_id;
 
         let shutdown = shutdown.clone();
-        let updates = tokio::task::spawn_blocking(move || {
-            ScanPool::for_files(page.len()).install(|| hash_each(&page, &shutdown))
-        })
-        .await
-        .map_err(|e| melodia_core::error::AppError::scanner("Hashing task panicked", e))?;
+        let playing = playing.clone();
+        let updates = tokio::task::spawn_blocking(move || hash_each(&page, &shutdown, &playing))
+            .await
+            .map_err(|e| melodia_core::error::AppError::scanner("Hashing task panicked", e))?;
 
         queries::track::batch_update_hashes(db, &updates).await?;
         hashed += updates.len();
@@ -91,43 +111,46 @@ async fn hash_unhashed_tracks(
     Ok(hashed)
 }
 
-/// **Blocking.** A file not yet started when shutdown fires is left for the next launch, so the
-/// page in flight costs at most one file per thread.
+/// **Blocking.** Shutdown abandons the file in flight, leaving it for the next launch.
 fn hash_each(
     unhashed: &[(i64, String)],
     shutdown: &CancellationToken,
+    playing: &impl Fn() -> bool,
 ) -> Vec<(i64, String, Option<String>)> {
-    use rayon::prelude::*;
+    let between_chunks = || {
+        if shutdown.is_cancelled() {
+            return ControlFlow::Break(());
+        }
+        if playing() {
+            std::thread::sleep(PLAYING_PAUSE);
+        }
+        ControlFlow::Continue(())
+    };
 
-    unhashed
-        .par_iter()
-        .filter_map(|(id, path_str)| {
-            if shutdown.is_cancelled() {
-                return None;
+    let mut updates = Vec::with_capacity(unhashed.len());
+    for (id, path_str) in unhashed {
+        if shutdown.is_cancelled() {
+            break;
+        }
+        let path = Path::new(path_str);
+        // One `stat` answers both "is it still there" and "when was it last written".
+        let Ok(meta) = std::fs::metadata(path) else {
+            log::debug!("Skipping missing file during retroactive hash: {path_str}");
+            continue;
+        };
+
+        let hash = match metadata::compute_file_hash_paced(path, CHUNK_BYTES, between_chunks) {
+            Ok(Some(hash)) => hash,
+            Ok(None) => break,
+            Err(e) => {
+                log::warn!("Failed to hash {path_str}: {}", melodia_core::error::describe(&e));
+                continue;
             }
-            let path = Path::new(path_str);
-            // One `stat` answers both "is it still there" and "when was it last
-            // written" — an absent file fails here exactly as the old
-            // `path.exists()` check did, and the mtime comes from the same
-            // instant as that existence proof.
-            let Ok(meta) = std::fs::metadata(path) else {
-                log::debug!("Skipping missing file during retroactive hash: {path_str}");
-                return None;
-            };
+        };
 
-            let hash = match melodia_store::media::ingest::metadata::compute_file_hash(path) {
-                Ok(h) => h,
-                Err(e) => {
-                    log::warn!("Failed to hash {path_str}: {}", melodia_core::error::describe(&e));
-                    return None;
-                }
-            };
-
-            let mtime = melodia_store::media::ingest::metadata::date_modified_from_metadata(&meta);
-
-            Some((*id, hash, mtime))
-        })
-        .collect()
+        updates.push((*id, hash, metadata::date_modified_from_metadata(&meta)));
+    }
+    updates
 }
 
 #[cfg(test)]

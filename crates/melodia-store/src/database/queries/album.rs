@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use sqlx::AssertSqlSafe;
 
 use crate::database::DbPool;
@@ -70,6 +72,20 @@ pub async fn get_all_albums(db: &DbPool) -> Result<Vec<album::AlbumStats>, AppEr
             .fetch_all(db.read())
             .await?;
     Ok(albums)
+}
+
+/// When each album last gained a track, as the RFC 3339 `tracks.date_added` text, whose lexical
+/// order is chronological. The newest track rather than the oldest, so an album completed later
+/// surfaces again under a newest-first sort. An album with no tracks has no entry.
+pub async fn get_album_dates_added(db: &DbPool) -> Result<HashMap<i64, String>, AppError> {
+    let rows: Vec<(i64, String)> = sqlx::query_as(
+        "SELECT album_id, MAX(date_added) FROM tracks
+          WHERE album_id IS NOT NULL
+          GROUP BY album_id",
+    )
+    .fetch_all(db.read())
+    .await?;
+    Ok(rows.into_iter().collect())
 }
 
 /// An album picked uniformly at random from those holding a track, other than the album of

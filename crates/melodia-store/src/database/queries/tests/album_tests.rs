@@ -89,6 +89,29 @@ async fn random_album_id_skips_an_album_with_no_tracks() -> Result<(), AppError>
     Ok(())
 }
 
+/// An album's date is its newest track's, so a track added to an old album brings it back to the
+/// top of a newest-first sort.
+#[tokio::test]
+async fn get_album_dates_added_takes_the_newest_track() -> Result<(), AppError> {
+    let db = setup_seeded_db().await?;
+    let one = album_id_named(&db, "Album One").await?;
+    let two = album_id_named(&db, "Album Two").await?;
+    sqlx::query("UPDATE tracks SET date_added = '2020-01-01T00:00:00+00:00'")
+        .execute(db.write())
+        .await?;
+    let newest = a_track_on(&db, one).await?;
+    sqlx::query("UPDATE tracks SET date_added = '2025-06-01T00:00:00+00:00' WHERE id = ?")
+        .bind(newest)
+        .execute(db.write())
+        .await?;
+
+    let dates = queries::album::get_album_dates_added(&db).await?;
+
+    assert_eq!(dates.get(&one).map(String::as_str), Some("2025-06-01T00:00:00+00:00"));
+    assert_eq!(dates.get(&two).map(String::as_str), Some("2020-01-01T00:00:00+00:00"));
+    Ok(())
+}
+
 #[tokio::test]
 async fn get_all_albums_track_counts() -> Result<(), AppError> {
     let db = setup_seeded_db().await?;

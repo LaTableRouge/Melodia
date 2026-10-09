@@ -437,6 +437,7 @@ msgid "Skips"
 msgstr "Jumlah dilewati"
 
 #: ui/components/dialog/smart-playlist-editor-body.slint
+#: ui/views/my-library/tab-pills.slint
 msgid "Date added"
 msgstr "Tanggal ditambahkan"
 

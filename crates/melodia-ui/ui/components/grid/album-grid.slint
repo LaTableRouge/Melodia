@@ -1,7 +1,10 @@
 import { ListView } from "std-widgets.slint";
+import { Theme } from "../../theme.slint";
 import { AlbumGridRow } from "../../models.slint";
+import { CardActions } from "../../globals/card-actions.slint";
 import { EntityCard } from "entity-card.slint";
 import { CardCell } from "card-cell.slint";
+import { IconButton } from "../icon-button.slint";
 
 // Virtualized album-card grid. Rust chunks the flat list into rows of `columns` cards, so the inner
 // `ListView` virtualizes by row and only on-screen rows build their cards. Covers come lazily off
@@ -68,7 +71,7 @@ export component AlbumGrid inherits Rectangle {
                     card-artist-id: album.artist_id;
                     go-to-artist(id) => { root.go-to-artist(id); }
 
-                    EntityCard {
+                    card := EntityCard {
                         card-width: root.card-width;
                         card-height: root.card-height;
                         artwork-path: album.artwork_path;
@@ -92,6 +95,38 @@ export component AlbumGrid inherits Rectangle {
                         selection-live: cell.selection-live;
                         select-clicked(shift, ctrl) => { cell.pick(shift, ctrl); }
                         context-requested(x, y) => { cell.open-menu(x, y); }
+
+                        // Play and the right-click menu, one click away: a card click opens the
+                        // detail, so nothing else on the grid plays. Framed off `card.tile-size`,
+                        // never `parent`, for the reason `PlaylistGrid` gives.
+                        show-overlay-actions: true;
+                        overlay-hovered: play_btn.has-hover || more_btn.has-hover;
+
+                        play_btn := IconButton {
+                            x: Theme.pad-sm;
+                            y: card.tile-size - self.height - Theme.pad-sm;
+                            icon: "play_arrow";
+                            icon-size: 22px;
+                            diameter: 36px;
+                            idle-bg: Theme.floating-chrome-bg;
+                            clicked => { CardActions.play("album", [album.id]); }
+                        }
+
+                        more_btn := IconButton {
+                            x: card.tile-size - self.width - Theme.pad-sm;
+                            y: card.tile-size - self.height - Theme.pad-sm;
+                            icon: "more_horiz";
+                            icon-size: 22px;
+                            diameter: 36px;
+                            idle-bg: Theme.floating-chrome-bg;
+                            // `open-menu` takes the card's frame; the overlay slot sits `pad-sm`
+                            // inside it.
+                            clicked => {
+                                cell.open-menu(
+                                    Theme.pad-sm + more_btn.x,
+                                    Theme.pad-sm + more_btn.y + more_btn.height);
+                            }
+                        }
                     }
                 }
             }

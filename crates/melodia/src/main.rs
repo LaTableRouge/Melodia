@@ -509,6 +509,13 @@ fn main() -> AppResult<()> {
     log::info!("Melodia shutting down — flushing player state");
     shutdown::save_state_on_exit(&app, &state, &runtime);
 
+    // After the save, which reads the window's geometry, and ahead of the rest, which can spend
+    // the whole flush budget: with the loop gone nothing repaints the window, so left up it reads
+    // as a hang.
+    if let Err(e) = app.hide() {
+        log::warn!("Failed to hide the window for shutdown: {e}");
+    }
+
     // Before `process::exit(0)` skips destructors: an exclusive claim hands the device back with
     // the volume it had, rather than leaving it at Melodia's.
     state.engine.close_output();
