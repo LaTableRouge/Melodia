@@ -92,6 +92,22 @@ pub async fn player_play_tracks(
     Ok(())
 }
 
+/// Replace the queue with a random album other than the one playing, in the order Album Detail
+/// shows it. A library with no other album leaves the queue as it is.
+pub async fn player_play_random_album(ctx: &PlaybackContext) -> Result<(), AppError> {
+    let playing_track_id = lock_state(&ctx.player_state).current_track().map(|t| t.id);
+    let Some(album_id) = queries::album::random_album_id(&ctx.db, playing_track_id).await? else {
+        log::debug!("play_random_album: the library holds no other album");
+        return Ok(());
+    };
+    let track_ids: Vec<i64> = queries::track::track_ids_by_albums(&ctx.db, &[album_id])
+        .await?
+        .into_iter()
+        .map(|(_, track_id)| track_id)
+        .collect();
+    player_play_tracks(ctx, track_ids, None).await
+}
+
 pub fn player_play(ctx: &PlaybackContext) -> Result<(), AppError> {
     if resume_station(ctx) {
         return Ok(());

@@ -340,6 +340,17 @@ export component NowPlayingBar inherits Rectangle {
                         clicked => { Player.toggle-shuffle(); }
                     }
                 }
+                VerticalLayout {
+                    alignment: center;
+                    IconButton {
+                        icon: "album";
+                        press-shrink: true;
+                        diameter: root.btn-d;
+                        icon-size: root.btn-icon-d;
+                        tooltip-text: @tr("Play a random album");
+                        clicked => { Player.play-random-album(); }
+                    }
+                }
                 if !Settings.overflow-favorite: VerticalLayout {
                     alignment: center;
                     IconButton {

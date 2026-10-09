@@ -316,6 +316,8 @@ export global Player {
     callback set-playback-speed(float);
     callback toggle-mute();
     callback toggle-shuffle();
+    // Replaces the queue with an album picked at random, never the one playing.
+    callback play-random-album();
     callback cycle-repeat();
     callback toggle-favorite();
     // 0–5. Mirrors `toggle-favorite`: applies to `current_track` and fans out to the row

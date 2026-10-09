@@ -245,6 +245,13 @@ pub fn wire_all(ui: &AppWindow, state: &AppState) {
         library::queue::queue_toggle_shuffle
     );
     wire_sync!(player, on_cycle_repeat, state, "cycle_repeat", library::queue::queue_cycle_repeat);
+    wire_pb!(
+        player,
+        on_play_random_album,
+        state,
+        "play_random_album",
+        library::playback::player_play_random_album
+    );
 
     // seek: hold the slider at the requested position until the backend reports a
     // matching update (`Player.seek_pending_ms`).
