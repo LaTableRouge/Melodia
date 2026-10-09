@@ -1,0 +1,3 @@
+# The dev image copies only rust-toolchain.toml; the checkout is bind-mounted at run time.
+*
+!rust-toolchain.toml
