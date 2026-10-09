@@ -105,19 +105,13 @@ pub async fn insert_tagged_track(
 
     let artist_name = meta.artist.primary_name();
     let artist_id = names.artist(&mut tx, artist_name, queries::artist::UNKNOWN_ARTIST_ID).await?;
-    let album_artist_name = queries::scan::album_artist_name_for(meta);
-    let album_artist_id = if album_artist_name == artist_name {
-        artist_id
-    } else {
-        names.artist(&mut tx, album_artist_name, queries::artist::UNKNOWN_ARTIST_ID).await?
-    };
-    let album_credit = queries::scan::album_credit_for(meta);
-    let album_id = queries::scan::upsert_album(
+    let album_id = queries::scan::resolve_album_for_track(
         &mut tx,
         meta.album.as_deref().unwrap_or(""),
-        album_artist_id,
-        &album_credit,
+        1,
         meta,
+        artist_id,
+        None,
         &mut names,
     )
     .await?;

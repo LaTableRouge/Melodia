@@ -171,6 +171,82 @@ pub async fn clear_release_tags(
     Ok(())
 }
 
+/// Merge album rows that share a title, year, and folder but were split by per-track performers.
+///
+/// Returns how many redundant album rows were retired. Idempotent once a folder holds a single row
+/// per title.
+pub async fn consolidate_split_albums_in_folders(
+    tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+) -> Result<u32, AppError> {
+    use crate::database::queries::artist::VARIOUS_ARTISTS_NAME;
+    use crate::database::queries::scan::{NameCache, promote_album_to_various_artists, prune_orphans};
+
+    let groups = sqlx::query_as::<_, (String, Option<i32>, i64)>(
+        "SELECT al.name, al.year, t.folder_id
+         FROM albums al
+         JOIN tracks t ON t.album_id = al.id
+         GROUP BY al.name COLLATE NOCASE, al.year, t.folder_id
+         HAVING COUNT(DISTINCT al.id) > 1",
+    )
+    .fetch_all(&mut **tx)
+    .await?;
+
+    let mut retired = 0u32;
+    for (name, year, folder_id) in groups {
+        let mut rows = sqlx::query_as::<_, (i64, i64)>(
+            "SELECT al.id, COUNT(t.id) AS track_count
+             FROM albums al
+             JOIN tracks t ON t.album_id = al.id AND t.folder_id = ?
+             WHERE al.name = ? COLLATE NOCASE AND (al.year IS NOT DISTINCT FROM ?)
+             GROUP BY al.id
+             ORDER BY track_count DESC, al.id ASC",
+        )
+        .bind(folder_id)
+        .bind(&name)
+        .bind(year)
+        .fetch_all(&mut **tx)
+        .await?;
+
+        if rows.len() < 2 {
+            continue;
+        }
+        let keep = rows[0].0;
+        for (loser, _) in rows.iter().skip(1) {
+            sqlx::query("UPDATE tracks SET album_id = ? WHERE album_id = ?")
+                .bind(keep)
+                .bind(loser)
+                .execute(&mut **tx)
+                .await?;
+            sqlx::query("DELETE FROM albums WHERE id = ?")
+                .bind(loser)
+                .execute(&mut **tx)
+                .await?;
+            retired += 1;
+        }
+    }
+
+    let mut names = NameCache::default();
+    let promote = sqlx::query_scalar::<_, i64>(
+        "SELECT t.album_id
+         FROM tracks t
+         JOIN albums al ON al.id = t.album_id
+         JOIN artists a ON a.id = al.artist_id
+         WHERE a.name <> ?
+         GROUP BY t.album_id
+         HAVING COUNT(DISTINCT t.artist_id) > 1",
+    )
+    .bind(VARIOUS_ARTISTS_NAME)
+    .fetch_all(&mut **tx)
+    .await?;
+
+    for album_id in promote {
+        promote_album_to_various_artists(tx, album_id, &mut names).await?;
+    }
+
+    prune_orphans(tx).await?;
+    Ok(retired)
+}
+
 #[cfg(test)]
 #[path = "tests/album_tests.rs"]
 mod tests;
