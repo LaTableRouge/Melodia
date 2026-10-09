@@ -32,10 +32,11 @@ use crate::state::AppState;
 use crate::tasks::TaskSpawner;
 use finish::Ingested;
 use melodia_core::entities::folder::Folder;
-use melodia_core::entities::scan::{ExistingTrackSummary, ScannedFile};
+use melodia_core::entities::scan::{ExistingTrackSummary, MoveCandidates, ScannedFile};
 use melodia_core::error::{AppError, describe};
 use melodia_core::utils::toast::{self, ToastKind};
 use melodia_store::database::queries;
+use melodia_store::media::ingest::metadata::Hashing;
 use melodia_store::media::ingest::scan_pool::ScanPool;
 use melodia_store::media::ingest::scanner::{
     MediaWalk, ScanObserver, collect_media_files, scan_files_parallel, track_is_current,
@@ -208,6 +209,7 @@ async fn scan_one(
     // correct, and accepted over plumbing the orphan count (unknown until
     // inside the transaction) into this decision.
     let mut ingested = Ingested::new(to_scan.len() > SCAN_BULK_THRESHOLD);
+    let move_candidates = Arc::new(queries::scan::get_move_candidates(&state.db).await?);
     run.begin_reading(u32::try_from(to_scan.len()).unwrap_or(u32::MAX));
 
     let scan_timestamp = melodia_core::utils::now_rfc3339();
@@ -232,7 +234,8 @@ async fn scan_one(
             break;
         }
         let chunk_len = u32::try_from(chunk.len()).unwrap_or(u32::MAX);
-        let scanned_files = parse_chunk(state, chunk, &pool, Arc::clone(run)).await?;
+        let scanned_files =
+            parse_chunk(state, chunk, &pool, Arc::clone(&move_candidates), Arc::clone(run)).await?;
         run.chunk_read(chunk_len);
         if scanned_files.is_empty() {
             continue;
@@ -354,18 +357,23 @@ async fn discover(
     .map_err(|e| AppError::scanner("Scan walk task failed", e))
 }
 
-/// Parses one chunk of a scan on its pool, reporting through `run`.
+/// Parses one chunk of a scan on its pool, reporting through `run`. Only a file that could be a
+/// move is hashed here; `tasks::retroactive_hash`, spawned once the scan finishes, hashes the rest.
 async fn parse_chunk(
     state: &AppState,
     paths: Vec<PathBuf>,
     pool: &ScanPool,
+    move_candidates: Arc<MoveCandidates>,
     run: Arc<ScanRun>,
 ) -> Result<Vec<ScannedFile>, AppError> {
     let artwork_dir = state.paths.artwork_dir.clone();
     let cover_cache = state.cover_cache.clone();
     let pool = pool.clone();
     tokio::task::spawn_blocking(move || {
-        pool.install(|| scan_files_parallel(&paths, &artwork_dir, &cover_cache, run.as_ref()))
+        let hashing = Hashing::IfMoveCandidate(&move_candidates);
+        pool.install(|| {
+            scan_files_parallel(&paths, &artwork_dir, &cover_cache, hashing, run.as_ref())
+        })
     })
     .await
     .map_err(|e| AppError::scanner("Scan task failed", e))

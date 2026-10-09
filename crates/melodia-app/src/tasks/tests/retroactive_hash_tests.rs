@@ -8,6 +8,7 @@
 use std::collections::HashMap;
 
 use tempfile::TempDir;
+use tokio_util::sync::CancellationToken;
 
 use super::*;
 use melodia_core::error::AppError;
@@ -58,7 +59,7 @@ async fn an_unhashed_row_gets_the_hash_of_its_own_file() -> Result<(), AppError>
     ])
     .await?;
 
-    hash_unhashed_tracks(&db).await?;
+    hash_unhashed_tracks(&db, &CancellationToken::new(), PAGE_ROWS).await?;
 
     let first = hash_of(&db, "first.mp3").await?;
     let third = hash_of(&db, "third.mp3").await?;
@@ -75,22 +76,22 @@ async fn an_unhashed_row_gets_the_hash_of_its_own_file() -> Result<(), AppError>
 async fn the_backfilled_mtime_comes_off_the_file() -> Result<(), AppError> {
     let (db, _tmp) = library(&[("song.mp3", b"bytes")]).await?;
 
-    hash_unhashed_tracks(&db).await?;
+    hash_unhashed_tracks(&db, &CancellationToken::new(), PAGE_ROWS).await?;
 
     let mtime = rows(&db).await?.get("song.mp3").and_then(|(_, mtime)| mtime.clone());
     assert_ne!(mtime.as_deref(), Some(STALE_MTIME), "the row kept the mtime it was seeded with");
     Ok(())
 }
 
-/// A library always has a few rows whose files have moved or gone. The pass is one parallel walk
+/// A library always has a few rows whose files have moved or gone. Each page is one parallel walk
 /// and one batch update, so a missing file that took the batch down with it would leave every
-/// other row on the list unhashed too.
+/// other row on the page unhashed too.
 #[tokio::test]
 async fn a_row_whose_file_is_gone_does_not_cost_its_neighbour_a_hash() -> Result<(), AppError> {
     let (db, tmp) = library(&[("present.mp3", b"bytes"), ("gone.mp3", b"bytes")]).await?;
     std::fs::remove_file(tmp.path().join("gone.mp3"))?;
 
-    hash_unhashed_tracks(&db).await?;
+    hash_unhashed_tracks(&db, &CancellationToken::new(), PAGE_ROWS).await?;
 
     assert!(hash_of(&db, "present.mp3").await?.is_some(), "a file that is there must be hashed");
     assert_eq!(hash_of(&db, "gone.mp3").await?, None, "and one that is not stays unanswered");
@@ -104,11 +105,41 @@ async fn a_row_that_already_has_a_hash_is_left_alone() -> Result<(), AppError> {
     let (db, _tmp) = library(&[("song.mp3", b"bytes")]).await?;
     sqlx::query("UPDATE tracks SET file_hash = 'from an earlier pass'").execute(db.write()).await?;
 
-    hash_unhashed_tracks(&db).await?;
+    hash_unhashed_tracks(&db, &CancellationToken::new(), PAGE_ROWS).await?;
 
     let row = rows(&db).await?;
     let (hash, mtime) = row.get("song.mp3").ok_or_else(|| AppError::NotFound("song.mp3".into()))?;
     assert_eq!(hash.as_deref(), Some("from an earlier pass"), "a hashed row is not on the list");
     assert_eq!(mtime.as_deref(), Some(STALE_MTIME), "and its mtime is not rewritten either");
+    Ok(())
+}
+
+/// A first import leaves the whole library unhashed, which is many pages. A missing file on the
+/// first page stays NULL, so a walk that re-read from the start would hand it back forever.
+#[tokio::test]
+async fn the_pass_walks_every_page_past_a_file_that_is_gone() -> Result<(), AppError> {
+    let (db, tmp) =
+        library(&[("gone.mp3", b"one"), ("second.mp3", b"two"), ("third.mp3", b"three")]).await?;
+    std::fs::remove_file(tmp.path().join("gone.mp3"))?;
+
+    let hashed = hash_unhashed_tracks(&db, &CancellationToken::new(), 1).await?;
+
+    assert_eq!(hashed, 2, "every file still there is hashed, one page at a time");
+    assert!(hash_of(&db, "third.mp3").await?.is_some(), "the last page is reached");
+    Ok(())
+}
+
+/// Shutdown is what a pass over terabytes is most likely to meet. It writes nothing it hasn't
+/// read, and leaves the rest NULL for the next launch to pick up.
+#[tokio::test]
+async fn a_pass_started_after_shutdown_reads_nothing() -> Result<(), AppError> {
+    let (db, _tmp) = library(&[("song.mp3", b"bytes")]).await?;
+    let shutdown = CancellationToken::new();
+    shutdown.cancel();
+
+    let hashed = hash_unhashed_tracks(&db, &shutdown, PAGE_ROWS).await?;
+
+    assert_eq!(hashed, 0);
+    assert_eq!(hash_of(&db, "song.mp3").await?, None, "the row is left for the next launch");
     Ok(())
 }

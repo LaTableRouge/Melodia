@@ -4,9 +4,10 @@
 //! None of the three carries `FromRow` — [`super::search`] states the rule they follow, that a
 //! value assembled by hand rather than decoded from a row is a boundary type rather than a row
 //! type. They live here because the store's two halves both name them: `media/` produces
-//! [`ExtractedMetadata`] and [`ScannedFile`] and consumes [`ExistingTrackSummary`], while
-//! `database/queries/scan` does the reverse.
+//! [`ExtractedMetadata`] and [`ScannedFile`] and consumes [`ExistingTrackSummary`] and
+//! [`MoveCandidates`], while `database/queries/scan` does the reverse.
 
+use std::collections::HashSet;
 use std::path::PathBuf;
 
 use super::artist::ArtistCredit;
@@ -21,6 +22,30 @@ use super::genre::GenreList;
 pub struct ExistingTrackSummary {
     pub file_size: Option<i64>,
     pub date_modified: Option<String>,
+}
+
+/// The sizes a moved file could arrive with: one per hashed track.
+///
+/// A move keeps a file's bytes, so a new path can only take over a row of its own size, and one
+/// matching none needs no hash to be told apart from a move. On a lossless library the hash is
+/// nearly all of a first scan's I/O, the tags being a few kilobytes at the head of each file.
+#[derive(Debug, Default)]
+pub struct MoveCandidates {
+    sizes: HashSet<i64>,
+    /// A hashed row with no recorded size, which any file could be a move of.
+    any_unsized: bool,
+}
+
+impl MoveCandidates {
+    #[must_use]
+    pub fn new(sizes: HashSet<i64>, any_unsized: bool) -> Self {
+        Self { sizes, any_unsized }
+    }
+
+    #[must_use]
+    pub fn could_be_moved(&self, file_size: i64) -> bool {
+        self.any_unsized || self.sizes.contains(&file_size)
+    }
 }
 
 /// One file the walk found, paired with what its tags read back as.
@@ -128,7 +153,9 @@ pub struct ExtractedMetadata {
     pub sample_rate: Option<i32>,
     pub bit_depth: Option<i32>,
     pub file_size: i64,
-    pub file_hash: String,
+    /// `None` where the parse was told it could skip the hash (`metadata::Hashing`), and the row
+    /// goes in unhashed for `tasks::retroactive_hash` to fill.
+    pub file_hash: Option<String>,
     pub date_modified: Option<String>,
     pub artwork_path: Option<String>,
 }

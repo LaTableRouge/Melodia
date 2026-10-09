@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use rayon::prelude::*;
 use walkdir::WalkDir;
 
-use crate::media::ingest::metadata::extract_or_filename_row;
+use crate::media::ingest::metadata::{Hashing, extract_or_filename_row};
 use melodia_core::entities::scan::{ExistingTrackSummary, ScannedFile};
 use melodia_core::utils::audio_ext::is_audio_extension;
 
@@ -86,6 +86,7 @@ pub fn scan_files_parallel(
     files: &[PathBuf],
     artwork_dir: &Path,
     cover_cache: &melodia_artwork::media::image::artwork::CoverCache,
+    hashing: Hashing<'_>,
     observer: &dyn ScanObserver,
 ) -> Vec<ScannedFile> {
     let total = files.len();
@@ -109,7 +110,7 @@ pub fn scan_files_parallel(
             // incremental filter (`track_is_current`) as new or changed, so
             // a full extract — embedded artwork included — is always
             // warranted. Unchanged files never get here.
-            match extract_or_filename_row(path, artwork_dir, cover_cache, false) {
+            match extract_or_filename_row(path, artwork_dir, cover_cache, false, hashing) {
                 Ok(metadata) => Some(ScannedFile { path: path.clone(), metadata }),
                 // Only an unreadable file gets this far now; unparseable tags come back
                 // as a filename-derived row rather than a `None`.

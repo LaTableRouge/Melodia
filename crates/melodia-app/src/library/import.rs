@@ -9,6 +9,7 @@ use melodia_core::entities::track::TrackSummary;
 use melodia_core::error::AppError;
 use melodia_core::utils::audio_ext::is_audio_extension;
 use melodia_store::database::{DbPool, queries};
+use melodia_store::media::ingest::metadata::Hashing;
 use melodia_store::media::ingest::scan_pool::ScanPool;
 use melodia_store::media::ingest::scanner::{Unobserved, scan_files_parallel};
 
@@ -81,7 +82,13 @@ async fn import_files(
         let (scanned_files, pool) = tokio::task::spawn_blocking(move || {
             let pool = ScanPool::for_files(new_paths_clone.len());
             let scanned = pool.install(|| {
-                scan_files_parallel(&new_paths_clone, &artwork_dir, &cover_cache_clone, &Unobserved)
+                scan_files_parallel(
+                    &new_paths_clone,
+                    &artwork_dir,
+                    &cover_cache_clone,
+                    Hashing::Always,
+                    &Unobserved,
+                )
             });
             (scanned, pool)
         })

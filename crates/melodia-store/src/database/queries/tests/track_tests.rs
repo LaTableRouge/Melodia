@@ -368,22 +368,27 @@ async fn batch_update_hashes_sets_values() -> Result<(), AppError> {
     Ok(())
 }
 
+/// The pages walk the unhashed rows in id order without repeating one, and a hashed row is on none
+/// of them.
 #[tokio::test]
-async fn get_unhashed_track_paths_finds_null_hashes() -> Result<(), AppError> {
+async fn get_unhashed_track_paths_after_pages_the_null_hashes() -> Result<(), AppError> {
     let db = DbPool::test_pool().await?;
     queries::folder::insert_folder(&db, "/music", true).await?;
-    let id = insert_test_track(&db, "/music/song.mp3", "Song", "Art", "Alb", "Rock").await?;
-
-    // Clear the hash
-    sqlx::query("UPDATE tracks SET file_hash = NULL WHERE id = ?")
-        .bind(id)
+    let first = insert_test_track(&db, "/music/a.mp3", "A", "Art", "Alb", "Rock").await?;
+    insert_test_track(&db, "/music/hashed.mp3", "Hashed", "Art", "Alb", "Rock").await?;
+    let second = insert_test_track(&db, "/music/b.mp3", "B", "Art", "Alb", "Rock").await?;
+    sqlx::query("UPDATE tracks SET file_hash = NULL WHERE id IN (?, ?)")
+        .bind(first)
+        .bind(second)
         .execute(db.write())
         .await?;
 
-    let unhashed = queries::track::get_unhashed_track_paths(&db).await?;
-    assert_eq!(unhashed.len(), 1);
-    assert_eq!(unhashed[0].0, id);
-    assert_eq!(unhashed[0].1, "/music/song.mp3");
+    let page = queries::track::get_unhashed_track_paths_after(&db, 0, 1).await?;
+    assert_eq!(page, vec![(first, "/music/a.mp3".to_owned())]);
+    let page = queries::track::get_unhashed_track_paths_after(&db, first, 1).await?;
+    assert_eq!(page, vec![(second, "/music/b.mp3".to_owned())], "the hashed row is skipped");
+    let page = queries::track::get_unhashed_track_paths_after(&db, second, 1).await?;
+    assert!(page.is_empty(), "the walk ends past the last unhashed row");
     Ok(())
 }
 

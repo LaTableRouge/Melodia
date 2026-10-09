@@ -2,6 +2,7 @@ use tempfile::TempDir;
 
 use super::*;
 use melodia_artwork::media::image::artwork::CoverCache;
+use melodia_core::entities::scan::MoveCandidates;
 use melodia_core::error::AppError;
 
 /// Creates a minimal valid WAV file (44-byte header + 4 bytes PCM data).
@@ -238,6 +239,75 @@ fn extract_metadata_file_size_recorded() -> Result<(), AppError> {
     Ok(())
 }
 
+// ── Hashing ──
+
+fn size_of(path: &std::path::Path) -> Result<i64, AppError> {
+    i64::try_from(std::fs::metadata(path)?.len())
+        .map_err(|_| AppError::Validation("file size exceeds i64".into()))
+}
+
+/// The whole of what the scan saves: a file no hashed row shares a size with cannot be a move,
+/// so it is never read past its tags.
+#[test]
+fn a_file_no_hashed_row_matches_in_size_goes_in_unhashed() -> Result<(), AppError> {
+    let tmp = TempDir::new()?;
+    let wav_path = tmp.path().join("test.wav");
+    create_minimal_wav(&wav_path)?;
+    let candidates = MoveCandidates::new([size_of(&wav_path)? + 1].into(), false);
+
+    let meta = extract_or_filename_row(
+        &wav_path,
+        tmp.path(),
+        &test_cover_cache(),
+        true,
+        Hashing::IfMoveCandidate(&candidates),
+    )?;
+
+    assert_eq!(meta.file_hash, None);
+    Ok(())
+}
+
+/// The other side of the same gate: a size match is what a move looks like, and a move is only
+/// recognised by its hash.
+#[test]
+fn a_file_a_hashed_row_matches_in_size_is_hashed() -> Result<(), AppError> {
+    let tmp = TempDir::new()?;
+    let wav_path = tmp.path().join("test.wav");
+    create_minimal_wav(&wav_path)?;
+    let candidates = MoveCandidates::new([size_of(&wav_path)?].into(), false);
+
+    let meta = extract_or_filename_row(
+        &wav_path,
+        tmp.path(),
+        &test_cover_cache(),
+        true,
+        Hashing::IfMoveCandidate(&candidates),
+    )?;
+
+    assert_eq!(meta.file_hash, Some(compute_file_hash(&wav_path)?));
+    Ok(())
+}
+
+/// A filename row is kept blind only because the hash read the file end to end, so one whose
+/// tags won't parse is hashed even where no move could explain it.
+#[test]
+fn an_unparseable_file_is_hashed_whatever_the_sizes_say() -> Result<(), AppError> {
+    let tmp = TempDir::new()?;
+    let mka = stage_as(&tmp, "silence.mka", "quiet.mka")?;
+    let none_match = MoveCandidates::default();
+
+    let meta = extract_or_filename_row(
+        &mka,
+        tmp.path(),
+        &test_cover_cache(),
+        true,
+        Hashing::IfMoveCandidate(&none_match),
+    )?;
+
+    assert_eq!(meta.file_hash, Some(compute_file_hash(&mka)?));
+    Ok(())
+}
+
 // ── the containers the extension list gained ──
 
 fn assets_dir() -> std::path::PathBuf {
@@ -321,7 +391,13 @@ fn containers_with_no_tag_reader_become_filename_rows() -> Result<(), AppError> 
             "{fixture} has no lofty reader, so the strict path must report that"
         );
 
-        let meta = extract_or_filename_row(&path, &artwork_dir, &test_cover_cache(), false)?;
+        let meta = extract_or_filename_row(
+            &path,
+            &artwork_dir,
+            &test_cover_cache(),
+            false,
+            Hashing::Always,
+        )?;
         assert_eq!(meta.title, "quiet");
         assert_eq!(meta.codec, None);
         assert!(meta.duration_ms > 0, "{fixture} should get a duration from the decoder");
@@ -342,7 +418,8 @@ fn an_unreadable_container_is_never_guessed_from_its_payload() -> Result<(), App
     std::fs::create_dir(&artwork_dir)?;
     let mka = stage_as(&tmp, "silence.mka", "quiet.mka")?;
 
-    let meta = extract_or_filename_row(&mka, &artwork_dir, &test_cover_cache(), false)?;
+    let meta =
+        extract_or_filename_row(&mka, &artwork_dir, &test_cover_cache(), false, Hashing::Always)?;
 
     assert_eq!(meta.codec, None, "a container lofty can't read must not acquire a codec");
     assert_eq!(meta.sample_rate, None);

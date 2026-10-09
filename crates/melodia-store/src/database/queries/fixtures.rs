@@ -64,7 +64,7 @@ pub fn make_test_metadata(title: &str) -> ExtractedMetadata {
         sample_rate: Some(44100),
         bit_depth: Some(16),
         file_size: 5_000_000,
-        file_hash: blake3::hash(title.as_bytes()).to_hex().to_string(),
+        file_hash: Some(blake3::hash(title.as_bytes()).to_hex().to_string()),
         date_modified: Some("2024-01-01T00:00:00+00:00".to_owned()),
         artwork_path: None,
     }
