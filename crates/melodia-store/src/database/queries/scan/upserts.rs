@@ -483,7 +483,7 @@ pub async fn resolve_album_for_track(
 
     if meta.album_artist.is_empty() {
         let year = meta.year;
-        if let Some(cache) = folder_cache {
+        if let Some(ref mut cache) = folder_cache {
             if let Some(id) = cache.get(album_name, folder_id, year) {
                 let existing_artist: i64 =
                     sqlx::query_scalar("SELECT artist_id FROM albums WHERE id = ?")
@@ -506,7 +506,7 @@ pub async fn resolve_album_for_track(
             } else {
                 apply_album_release_fields(tx, existing_id, meta).await?;
             }
-            if let Some(cache) = folder_cache {
+            if let Some(ref mut cache) = folder_cache {
                 cache.insert(album_name, folder_id, year, existing_id);
             }
             return Ok(Some(existing_id));
@@ -514,7 +514,9 @@ pub async fn resolve_album_for_track(
     }
 
     let album_id = upsert_album(tx, album_name, album_artist_id, &credit, meta, names).await?;
-    if let (Some(id), Some(cache)) = (album_id, folder_cache) {
+    if let Some(id) = album_id
+        && let Some(ref mut cache) = folder_cache
+    {
         cache.insert(album_name, folder_id, meta.year, id);
     }
     Ok(album_id)
