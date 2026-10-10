@@ -42,6 +42,7 @@ use slint::winit_030::winit::dpi::{
     PhysicalSize as WinitPhysicalSize,
 };
 use slint::winit_030::winit::window::Window as WinitWindow;
+use slint::winit_030::WinitWindowAccessor;
 use slint::{ComponentHandle, LogicalPosition, LogicalSize};
 
 use melodia_app::services::settings::{FullPlayerGeometry, SettingsData, WindowPosition};
@@ -328,10 +329,6 @@ pub fn release_full_player() {
     *held().lock() = None;
 }
 
-/// Size and place the window back where the full player was held, which leaves the miniplayer.
-///
-/// Placed only where winit ever reported a position, so Wayland keeps the compositor's placement.
-/// Nothing held falls back to the first-launch geometry.
 /// Resize into the miniplayer band. Same threshold the responsive switch uses.
 pub fn enter_mini_player(app: &AppWindow) {
     if app.invoke_miniplayer_mounted() {

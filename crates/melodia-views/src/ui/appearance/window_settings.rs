@@ -180,8 +180,7 @@ pub(super) fn wire_nav_visibility_changed(ui: &AppWindow, state: &AppState) {
         let s = state.clone();
         let weak = ui.as_weak();
         ui.global::<Settings>().on_nav_hide_browse_changed(move |hide| {
-            s.persist_blocking("nav hide browse", move |st| library::settings::set_hide_browse(st, hide))
-                .ok();
+            s.persist_blocking("nav hide browse", move |st| library::settings::set_hide_browse(st, hide));
             if let Some(ui) = weak.upgrade() {
                 leave_section(&ui, 1, hide);
             }
@@ -193,8 +192,7 @@ pub(super) fn wire_nav_visibility_changed(ui: &AppWindow, state: &AppState) {
         ui.global::<Settings>().on_nav_hide_favorites_changed(move |hide| {
             s.persist_blocking("nav hide favorites", move |st| {
                 library::settings::set_hide_favorites(st, hide)
-            })
-            .ok();
+            });
             if let Some(ui) = weak.upgrade() {
                 leave_section(&ui, 2, hide);
             }
@@ -206,8 +204,7 @@ pub(super) fn wire_nav_visibility_changed(ui: &AppWindow, state: &AppState) {
         ui.global::<Settings>().on_nav_hide_recently_played_changed(move |hide| {
             s.persist_blocking("nav hide recently played", move |st| {
                 library::settings::set_hide_recently_played(st, hide)
-            })
-            .ok();
+            });
             if let Some(ui) = weak.upgrade() {
                 leave_section(&ui, 8, hide);
             }
@@ -219,8 +216,7 @@ pub(super) fn wire_nav_visibility_changed(ui: &AppWindow, state: &AppState) {
         ui.global::<Settings>().on_nav_hide_my_library_changed(move |hide| {
             s.persist_blocking("nav hide my library", move |st| {
                 library::settings::set_hide_my_library(st, hide)
-            })
-            .ok();
+            });
             if let Some(ui) = weak.upgrade() {
                 leave_section(&ui, 3, hide);
             }

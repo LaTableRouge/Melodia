@@ -447,11 +447,11 @@ pub async fn resolve_album_for_track(
     };
 
     if meta.album_artist.is_empty() {
-        if let Some(ref mut cache) = folder_cache {
-            if let Some(id) = cache.get(album_name, folder_id) {
-                apply_album_release_fields(tx, id, meta).await?;
-                return Ok(Some(id));
-            }
+        if let Some(ref mut cache) = folder_cache
+            && let Some(id) = cache.get(album_name, folder_id)
+        {
+            apply_album_release_fields(tx, id, meta).await?;
+            return Ok(Some(id));
         }
         if let Some((existing_id, _existing_artist_id)) =
             find_album_in_folder_by_name(tx, album_name, folder_id).await?
