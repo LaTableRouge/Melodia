@@ -100,6 +100,23 @@ pub(super) fn wire(ui: &AppWindow, state: &AppState, albums_ui: &Arc<AlbumsUi>) 
     {
         let s = state.clone();
         let au = albums_ui.clone();
+        detail.on_play_album(move || {
+            let ids = au.detail_track_ids();
+            if ids.is_empty() {
+                return;
+            }
+            let s = s.clone();
+            spawn_logged!(
+                s,
+                "albums::play_album",
+                library::playback::player_play_tracks(&s.playback_ctx(), ids, None)
+            );
+        });
+    }
+
+    {
+        let s = state.clone();
+        let au = albums_ui.clone();
         detail.on_shuffle_album(move || {
             spawn_play_then_shuffle(&s, "albums::shuffle_album", au.detail_track_ids());
         });

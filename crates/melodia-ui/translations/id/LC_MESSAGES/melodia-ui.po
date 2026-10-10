@@ -16,20 +16,22 @@ msgid "Search"
 msgstr "Cari"
 
 #: ui/app-window.slint ui/layout/sidebar.slint ui/views/radio-view.slint
+#: ui/views/settings/sidebar-section.slint
 msgid "Browse"
 msgstr "Jelajahi"
 
 #: ui/app-window.slint ui/layout/sidebar.slint ui/views/favorites-view.slint
-#: ui/views/radio-view.slint
+#: ui/views/radio-view.slint ui/views/settings/sidebar-section.slint
 msgid "Favorites"
 msgstr "Favorit"
 
 #: ui/app-window.slint ui/layout/sidebar.slint
+#: ui/views/settings/sidebar-section.slint
 msgid "My Library"
 msgstr "Pustaka Saya"
 
 #: ui/app-window.slint ui/layout/sidebar.slint ui/views/radio-view.slint
-#: ui/views/recently-played-view.slint
+#: ui/views/recently-played-view.slint ui/views/settings/sidebar-section.slint
 msgid "Recently Played"
 msgstr "Terakhir Diputar"
 
@@ -806,7 +808,7 @@ msgstr "Folder"
 #: ui/components/grid/station-context-menu.slint
 #: ui/components/now-playing/play-button.slint
 #: ui/components/track-list/track-context-menu.slint
-#: ui/views/radio/tab-pills.slint
+#: ui/views/my-library/tab-pills.slint ui/views/radio/tab-pills.slint
 msgid "Play"
 msgstr "Putar"
 
@@ -1733,6 +1735,11 @@ msgstr "Dikonversi"
 #: ui/layout/now-playing-bar.slint
 msgid "Play a random album"
 msgstr "Putar album acak"
+
+#: ui/layout/now-playing-bar.slint
+#, fuzzy
+msgid "Compact player"
+msgstr "Terakhir diputar"
 
 #. Translators: the action a click takes, expanding the sidebar
 #: ui/layout/sidebar.slint
@@ -2667,6 +2674,7 @@ msgid "The minimize, full player and close buttons in the miniplayer's corner."
 msgstr "Tombol perkecil, pemutar penuh, dan tutup di sudut pemutar mini."
 
 #: ui/views/settings/mini-player-section.slint
+#: ui/views/settings/overflow-menu-section.slint
 msgid "Album Backdrop"
 msgstr "Latar Album"
 
@@ -2966,12 +2974,23 @@ msgid "Player Bar"
 msgstr "Bilah Pemutar"
 
 #: ui/views/settings/overflow-menu-section.slint
-msgid "Overflow Menu Buttons"
-msgstr "Tombol Menu Lainnya"
+#, fuzzy
+msgid "Desktop player bar"
+msgstr "paling jarang diputar"
 
 #: ui/views/settings/overflow-menu-section.slint
-msgid "Move selected buttons into a compact overflow menu in the player bar"
-msgstr "Pindahkan tombol yang dipilih ke menu lainnya yang ringkas di bilah pemutar"
+#, fuzzy
+msgid "Checked buttons move into the ⋮ menu instead of showing on the bar"
+msgstr "Hapus kartu saat dijeda alih-alih menampilkan penanda jeda"
+
+#: ui/views/settings/overflow-menu-section.slint
+#, fuzzy
+msgid "Mini player"
+msgstr "Pemutar Mini"
+
+#: ui/views/settings/overflow-menu-section.slint
+msgid "Checked controls are hidden on the compact player strip"
+msgstr ""
 
 #: ui/views/settings/playback-section.slint
 msgid "Gapless Playback"
@@ -3161,6 +3180,19 @@ msgstr "Aktifkan Last.fm atau ListenBrainz di atas terlebih dahulu"
 #: ui/views/settings/settings-tabs.slint
 msgid "No matching settings"
 msgstr "Tidak ada pengaturan yang cocok"
+
+#: ui/views/settings/sidebar-section.slint
+msgid "Sidebar"
+msgstr ""
+
+#: ui/views/settings/sidebar-section.slint
+#, fuzzy
+msgid "Sidebar sections"
+msgstr "Hapus pilihan"
+
+#: ui/views/settings/sidebar-section.slint
+msgid "Hide sections you do not use. Search and Settings always stay visible."
+msgstr ""
 
 #: ui/views/settings/update-section.slint
 msgid "Updates"

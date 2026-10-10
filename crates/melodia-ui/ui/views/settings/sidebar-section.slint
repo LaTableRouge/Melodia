@@ -4,8 +4,10 @@ import { SettingsPage } from "../../globals/settings-page.slint";
 import { SectionCard } from "../../components/settings/section-card.slint";
 import { SettingRowStacked } from "../../components/settings/setting-row-stacked.slint";
 import { Checkbox } from "../../components/checkbox.slint";
+import { MaterialIcon } from "../../components/material-icon.slint";
 
 component NavHideCell inherits Rectangle {
+    in property <string> icon;
     in property <string> label;
     in-out property <bool> checked;
     callback toggled();
@@ -21,6 +23,14 @@ component NavHideCell inherits Rectangle {
         VerticalLayout {
             alignment: center;
             Checkbox { checked: root.checked; unchecked-border: Theme.text-muted; }
+        }
+        VerticalLayout {
+            alignment: center;
+            MaterialIcon {
+                name: root.icon;
+                icon-size: 20px;
+                icon-color: Theme.text;
+            }
         }
         VerticalLayout {
             alignment: center;
@@ -58,33 +68,49 @@ export component SidebarSection inherits Rectangle {
         if root.show-row: SectionCard {
             title: root.card-title;
             SettingRowStacked {
-                icon: "view_sidebar";
+                icon: "dock_to_left";
                 label: root.row-label;
                 description: root.row-desc;
                 GridLayout {
                     spacing: Theme.pad-xs;
                     Row {
                         NavHideCell {
+                            icon: "folder";
                             label: @tr("Browse");
                             checked: !Settings.nav-hide-browse;
-                            toggled => { Settings.nav-hide-browse-changed(!Settings.nav-hide-browse); }
+                            toggled => {
+                                Settings.nav-hide-browse = !Settings.nav-hide-browse;
+                                Settings.nav-hide-browse-changed(Settings.nav-hide-browse);
+                            }
                         }
                         NavHideCell {
+                            icon: "favorite";
                             label: @tr("Favorites");
                             checked: !Settings.nav-hide-favorites;
-                            toggled => { Settings.nav-hide-favorites-changed(!Settings.nav-hide-favorites); }
+                            toggled => {
+                                Settings.nav-hide-favorites = !Settings.nav-hide-favorites;
+                                Settings.nav-hide-favorites-changed(Settings.nav-hide-favorites);
+                            }
                         }
                     }
                     Row {
                         NavHideCell {
+                            icon: "history";
                             label: @tr("Recently Played");
                             checked: !Settings.nav-hide-recently-played;
-                            toggled => { Settings.nav-hide-recently-played-changed(!Settings.nav-hide-recently-played); }
+                            toggled => {
+                                Settings.nav-hide-recently-played = !Settings.nav-hide-recently-played;
+                                Settings.nav-hide-recently-played-changed(Settings.nav-hide-recently-played);
+                            }
                         }
                         NavHideCell {
+                            icon: "library_music";
                             label: @tr("My Library");
                             checked: !Settings.nav-hide-my-library;
-                            toggled => { Settings.nav-hide-my-library-changed(!Settings.nav-hide-my-library); }
+                            toggled => {
+                                Settings.nav-hide-my-library = !Settings.nav-hide-my-library;
+                                Settings.nav-hide-my-library-changed(Settings.nav-hide-my-library);
+                            }
                         }
                     }
                 }

@@ -16,20 +16,22 @@ msgid "Search"
 msgstr "Rechercher"
 
 #: ui/app-window.slint ui/layout/sidebar.slint ui/views/radio-view.slint
+#: ui/views/settings/sidebar-section.slint
 msgid "Browse"
 msgstr "Parcourir"
 
 #: ui/app-window.slint ui/layout/sidebar.slint ui/views/favorites-view.slint
-#: ui/views/radio-view.slint
+#: ui/views/radio-view.slint ui/views/settings/sidebar-section.slint
 msgid "Favorites"
 msgstr "Favoris"
 
 #: ui/app-window.slint ui/layout/sidebar.slint
+#: ui/views/settings/sidebar-section.slint
 msgid "My Library"
 msgstr "Ma bibliothèque"
 
 #: ui/app-window.slint ui/layout/sidebar.slint ui/views/radio-view.slint
-#: ui/views/recently-played-view.slint
+#: ui/views/recently-played-view.slint ui/views/settings/sidebar-section.slint
 msgid "Recently Played"
 msgstr "Écoutés récemment"
 
@@ -808,7 +810,7 @@ msgstr "Dossier"
 #: ui/components/grid/station-context-menu.slint
 #: ui/components/now-playing/play-button.slint
 #: ui/components/track-list/track-context-menu.slint
-#: ui/views/radio/tab-pills.slint
+#: ui/views/my-library/tab-pills.slint ui/views/radio/tab-pills.slint
 msgid "Play"
 msgstr "Lecture"
 
@@ -1744,6 +1746,10 @@ msgstr "Converti"
 #: ui/layout/now-playing-bar.slint
 msgid "Play a random album"
 msgstr "Lire un album au hasard"
+
+#: ui/layout/now-playing-bar.slint
+msgid "Compact player"
+msgstr "Lecteur compact"
 
 #. Translators: the action a click takes, expanding the sidebar
 #: ui/layout/sidebar.slint
@@ -2693,6 +2699,7 @@ msgid "The minimize, full player and close buttons in the miniplayer's corner."
 msgstr "Les boutons pour réduire, revenir au lecteur complet et fermer, dans le coin du mini-lecteur."
 
 #: ui/views/settings/mini-player-section.slint
+#: ui/views/settings/overflow-menu-section.slint
 msgid "Album Backdrop"
 msgstr "Arrière-plan de l'album"
 
@@ -2992,12 +2999,20 @@ msgid "Player Bar"
 msgstr "Barre de lecture"
 
 #: ui/views/settings/overflow-menu-section.slint
-msgid "Overflow Menu Buttons"
-msgstr "Boutons du menu de débordement"
+msgid "Desktop player bar"
+msgstr "Barre du lecteur (grand écran)"
 
 #: ui/views/settings/overflow-menu-section.slint
-msgid "Move selected buttons into a compact overflow menu in the player bar"
-msgstr "Déplacer les boutons sélectionnés dans un menu de débordement compact dans la barre de lecture"
+msgid "Checked buttons move into the ⋮ menu instead of showing on the bar"
+msgstr "Les boutons cochés passent dans le menu ⋮ au lieu d’apparaître sur la barre"
+
+#: ui/views/settings/overflow-menu-section.slint
+msgid "Mini player"
+msgstr "Mini-lecteur"
+
+#: ui/views/settings/overflow-menu-section.slint
+msgid "Checked controls are hidden on the compact player strip"
+msgstr "Les commandes cochées sont masquées sur la bande du lecteur compact"
 
 #: ui/views/settings/playback-section.slint
 msgid "Gapless Playback"
@@ -3187,6 +3202,18 @@ msgstr "Activez d'abord Last.fm ou ListenBrainz ci-dessus"
 #: ui/views/settings/settings-tabs.slint
 msgid "No matching settings"
 msgstr "Aucun paramètre correspondant"
+
+#: ui/views/settings/sidebar-section.slint
+msgid "Sidebar"
+msgstr "Barre latérale"
+
+#: ui/views/settings/sidebar-section.slint
+msgid "Sidebar sections"
+msgstr "Sections de la barre latérale"
+
+#: ui/views/settings/sidebar-section.slint
+msgid "Hide sections you do not use. Search and Settings always stay visible."
+msgstr "Masquez les sections inutilisées. Recherche et Paramètres restent toujours visibles."
 
 #: ui/views/settings/update-section.slint
 msgid "Updates"

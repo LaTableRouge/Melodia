@@ -89,6 +89,12 @@ export component MyLibraryTabPills inherits Rectangle {
         // the published-anchor treatment, and it needs it for a reason of its own.
         if root.album-open: ActionPill {
             PillButton {
+                icon: "play_arrow";
+                text: @tr("Play");
+                clicked => { AlbumDetail.play-album(); }
+            }
+            PillDivider { }
+            PillButton {
                 icon: "shuffle";
                 text: @tr("Shuffle");
                 clicked => { AlbumDetail.shuffle-album(); }

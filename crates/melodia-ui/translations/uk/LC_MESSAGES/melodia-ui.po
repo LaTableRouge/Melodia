@@ -16,20 +16,22 @@ msgid "Search"
 msgstr "Пошук"
 
 #: ui/app-window.slint ui/layout/sidebar.slint ui/views/radio-view.slint
+#: ui/views/settings/sidebar-section.slint
 msgid "Browse"
 msgstr "Огляд"
 
 #: ui/app-window.slint ui/layout/sidebar.slint ui/views/favorites-view.slint
-#: ui/views/radio-view.slint
+#: ui/views/radio-view.slint ui/views/settings/sidebar-section.slint
 msgid "Favorites"
 msgstr "Обране"
 
 #: ui/app-window.slint ui/layout/sidebar.slint
+#: ui/views/settings/sidebar-section.slint
 msgid "My Library"
 msgstr "Моя медіатека"
 
 #: ui/app-window.slint ui/layout/sidebar.slint ui/views/radio-view.slint
-#: ui/views/recently-played-view.slint
+#: ui/views/recently-played-view.slint ui/views/settings/sidebar-section.slint
 msgid "Recently Played"
 msgstr "Нещодавно прослухане"
 
@@ -810,7 +812,7 @@ msgstr "Тека"
 #: ui/components/grid/station-context-menu.slint
 #: ui/components/now-playing/play-button.slint
 #: ui/components/track-list/track-context-menu.slint
-#: ui/views/radio/tab-pills.slint
+#: ui/views/my-library/tab-pills.slint ui/views/radio/tab-pills.slint
 msgid "Play"
 msgstr "Відтворити"
 
@@ -1755,6 +1757,11 @@ msgstr "Перетворено"
 #: ui/layout/now-playing-bar.slint
 msgid "Play a random album"
 msgstr "Відтворити випадковий альбом"
+
+#: ui/layout/now-playing-bar.slint
+#, fuzzy
+msgid "Compact player"
+msgstr "Останнє прослуховування"
 
 #. Translators: the action a click takes, expanding the sidebar
 #: ui/layout/sidebar.slint
@@ -2719,6 +2726,7 @@ msgid "The minimize, full player and close buttons in the miniplayer's corner."
 msgstr "Кнопки згортання, повного плеєра та закриття в куті мініплеєра."
 
 #: ui/views/settings/mini-player-section.slint
+#: ui/views/settings/overflow-menu-section.slint
 msgid "Album Backdrop"
 msgstr "Фон з обкладинки"
 
@@ -3018,12 +3026,23 @@ msgid "Player Bar"
 msgstr "Панель плеєра"
 
 #: ui/views/settings/overflow-menu-section.slint
-msgid "Overflow Menu Buttons"
-msgstr "Кнопки в меню «Більше»"
+#, fuzzy
+msgid "Desktop player bar"
+msgstr "рідко прослуховувані"
 
 #: ui/views/settings/overflow-menu-section.slint
-msgid "Move selected buttons into a compact overflow menu in the player bar"
-msgstr "Переносити вибрані кнопки в компактне меню «Більше» на панелі плеєра"
+#, fuzzy
+msgid "Checked buttons move into the ⋮ menu instead of showing on the bar"
+msgstr "Прибирати картку на паузі, а не показувати значок паузи"
+
+#: ui/views/settings/overflow-menu-section.slint
+#, fuzzy
+msgid "Mini player"
+msgstr "Мініплеєр"
+
+#: ui/views/settings/overflow-menu-section.slint
+msgid "Checked controls are hidden on the compact player strip"
+msgstr ""
 
 #: ui/views/settings/playback-section.slint
 msgid "Gapless Playback"
@@ -3213,6 +3232,19 @@ msgstr "Спершу ввімкніть Last.fm або ListenBrainz вище"
 #: ui/views/settings/settings-tabs.slint
 msgid "No matching settings"
 msgstr "Відповідних налаштувань немає"
+
+#: ui/views/settings/sidebar-section.slint
+msgid "Sidebar"
+msgstr ""
+
+#: ui/views/settings/sidebar-section.slint
+#, fuzzy
+msgid "Sidebar sections"
+msgstr "Зняти виділення"
+
+#: ui/views/settings/sidebar-section.slint
+msgid "Hide sections you do not use. Search and Settings always stay visible."
+msgstr ""
 
 #: ui/views/settings/update-section.slint
 msgid "Updates"

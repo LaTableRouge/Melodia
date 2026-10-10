@@ -16,20 +16,22 @@ msgid "Search"
 msgstr "Ara"
 
 #: ui/app-window.slint ui/layout/sidebar.slint ui/views/radio-view.slint
+#: ui/views/settings/sidebar-section.slint
 msgid "Browse"
 msgstr "Gözat"
 
 #: ui/app-window.slint ui/layout/sidebar.slint ui/views/favorites-view.slint
-#: ui/views/radio-view.slint
+#: ui/views/radio-view.slint ui/views/settings/sidebar-section.slint
 msgid "Favorites"
 msgstr "Favoriler"
 
 #: ui/app-window.slint ui/layout/sidebar.slint
+#: ui/views/settings/sidebar-section.slint
 msgid "My Library"
 msgstr "Kitaplığım"
 
 #: ui/app-window.slint ui/layout/sidebar.slint ui/views/radio-view.slint
-#: ui/views/recently-played-view.slint
+#: ui/views/recently-played-view.slint ui/views/settings/sidebar-section.slint
 msgid "Recently Played"
 msgstr "Son Çalınanlar"
 
@@ -810,7 +812,7 @@ msgstr "Klasör"
 #: ui/components/grid/station-context-menu.slint
 #: ui/components/now-playing/play-button.slint
 #: ui/components/track-list/track-context-menu.slint
-#: ui/views/radio/tab-pills.slint
+#: ui/views/my-library/tab-pills.slint ui/views/radio/tab-pills.slint
 msgid "Play"
 msgstr "Çal"
 
@@ -1753,6 +1755,11 @@ msgstr "Dönüştürülmüş"
 #: ui/layout/now-playing-bar.slint
 msgid "Play a random album"
 msgstr "Rastgele bir albüm çal"
+
+#: ui/layout/now-playing-bar.slint
+#, fuzzy
+msgid "Compact player"
+msgstr "Son çalınma"
 
 #. Translators: the action a click takes, expanding the sidebar
 #: ui/layout/sidebar.slint
@@ -2704,6 +2711,7 @@ msgid "The minimize, full player and close buttons in the miniplayer's corner."
 msgstr "Mini oynatıcının köşesindeki simge durumuna küçültme, tam oynatıcı ve kapatma düğmeleri."
 
 #: ui/views/settings/mini-player-section.slint
+#: ui/views/settings/overflow-menu-section.slint
 msgid "Album Backdrop"
 msgstr "Albüm arka planı"
 
@@ -3003,12 +3011,23 @@ msgid "Player Bar"
 msgstr "Çalar Çubuğu"
 
 #: ui/views/settings/overflow-menu-section.slint
-msgid "Overflow Menu Buttons"
-msgstr "Taşma Menüsü Düğmeleri"
+#, fuzzy
+msgid "Desktop player bar"
+msgstr "en az çalınan"
 
 #: ui/views/settings/overflow-menu-section.slint
-msgid "Move selected buttons into a compact overflow menu in the player bar"
-msgstr "Seçili düğmeleri çalar çubuğunda kompakt bir taşma menüsüne taşı"
+#, fuzzy
+msgid "Checked buttons move into the ⋮ menu instead of showing on the bar"
+msgstr "Duraklatıldığında duraklama işareti göstermek yerine kartı kaldır"
+
+#: ui/views/settings/overflow-menu-section.slint
+#, fuzzy
+msgid "Mini player"
+msgstr "Mini oynatıcı"
+
+#: ui/views/settings/overflow-menu-section.slint
+msgid "Checked controls are hidden on the compact player strip"
+msgstr ""
 
 #: ui/views/settings/playback-section.slint
 msgid "Gapless Playback"
@@ -3198,6 +3217,19 @@ msgstr "Önce yukarıdan Last.fm'i veya ListenBrainz'i aç"
 #: ui/views/settings/settings-tabs.slint
 msgid "No matching settings"
 msgstr "Eşleşen ayar yok"
+
+#: ui/views/settings/sidebar-section.slint
+msgid "Sidebar"
+msgstr ""
+
+#: ui/views/settings/sidebar-section.slint
+#, fuzzy
+msgid "Sidebar sections"
+msgstr "Seçimi temizle"
+
+#: ui/views/settings/sidebar-section.slint
+msgid "Hide sections you do not use. Search and Settings always stay visible."
+msgstr ""
 
 #: ui/views/settings/update-section.slint
 msgid "Updates"

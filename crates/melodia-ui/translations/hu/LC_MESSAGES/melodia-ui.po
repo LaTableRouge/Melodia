@@ -16,20 +16,22 @@ msgid "Search"
 msgstr "Keresés"
 
 #: ui/app-window.slint ui/layout/sidebar.slint ui/views/radio-view.slint
+#: ui/views/settings/sidebar-section.slint
 msgid "Browse"
 msgstr "Böngészés"
 
 #: ui/app-window.slint ui/layout/sidebar.slint ui/views/favorites-view.slint
-#: ui/views/radio-view.slint
+#: ui/views/radio-view.slint ui/views/settings/sidebar-section.slint
 msgid "Favorites"
 msgstr "Kedvencek"
 
 #: ui/app-window.slint ui/layout/sidebar.slint
+#: ui/views/settings/sidebar-section.slint
 msgid "My Library"
 msgstr "Könyvtáram"
 
 #: ui/app-window.slint ui/layout/sidebar.slint ui/views/radio-view.slint
-#: ui/views/recently-played-view.slint
+#: ui/views/recently-played-view.slint ui/views/settings/sidebar-section.slint
 msgid "Recently Played"
 msgstr "Nemrég lejátszottak"
 
@@ -810,7 +812,7 @@ msgstr "Mappa"
 #: ui/components/grid/station-context-menu.slint
 #: ui/components/now-playing/play-button.slint
 #: ui/components/track-list/track-context-menu.slint
-#: ui/views/radio/tab-pills.slint
+#: ui/views/my-library/tab-pills.slint ui/views/radio/tab-pills.slint
 msgid "Play"
 msgstr "Lejátszás"
 
@@ -1746,6 +1748,11 @@ msgstr "Átalakított"
 #: ui/layout/now-playing-bar.slint
 msgid "Play a random album"
 msgstr "Véletlenszerű album lejátszása"
+
+#: ui/layout/now-playing-bar.slint
+#, fuzzy
+msgid "Compact player"
+msgstr "Utoljára lejátszva"
 
 #. Translators: the action a click takes, expanding the sidebar
 #: ui/layout/sidebar.slint
@@ -2695,6 +2702,7 @@ msgid "The minimize, full player and close buttons in the miniplayer's corner."
 msgstr "A kis méret, a teljes lejátszó és a bezárás gomb a minilejátszó sarkában."
 
 #: ui/views/settings/mini-player-section.slint
+#: ui/views/settings/overflow-menu-section.slint
 msgid "Album Backdrop"
 msgstr "Albumháttér"
 
@@ -2994,12 +3002,23 @@ msgid "Player Bar"
 msgstr "Lejátszósáv"
 
 #: ui/views/settings/overflow-menu-section.slint
-msgid "Overflow Menu Buttons"
-msgstr "A Továbbiak menü gombjai"
+#, fuzzy
+msgid "Desktop player bar"
+msgstr "legkevesebbet játszott"
 
 #: ui/views/settings/overflow-menu-section.slint
-msgid "Move selected buttons into a compact overflow menu in the player bar"
-msgstr "A kiválasztott gombok áthelyezése a lejátszósáv tömör Továbbiak menüjébe"
+#, fuzzy
+msgid "Checked buttons move into the ⋮ menu instead of showing on the bar"
+msgstr "Szüneteltetéskor a kártya eltűnik, a szünetjelzés helyett"
+
+#: ui/views/settings/overflow-menu-section.slint
+#, fuzzy
+msgid "Mini player"
+msgstr "Minilejátszó"
+
+#: ui/views/settings/overflow-menu-section.slint
+msgid "Checked controls are hidden on the compact player strip"
+msgstr ""
 
 #: ui/views/settings/playback-section.slint
 msgid "Gapless Playback"
@@ -3189,6 +3208,19 @@ msgstr "Előbb kapcsold be fent a Last.fm-et vagy a ListenBrainzt"
 #: ui/views/settings/settings-tabs.slint
 msgid "No matching settings"
 msgstr "Nincs egyező beállítás"
+
+#: ui/views/settings/sidebar-section.slint
+msgid "Sidebar"
+msgstr ""
+
+#: ui/views/settings/sidebar-section.slint
+#, fuzzy
+msgid "Sidebar sections"
+msgstr "Kijelölés törlése"
+
+#: ui/views/settings/sidebar-section.slint
+msgid "Hide sections you do not use. Search and Settings always stay visible."
+msgstr ""
 
 #: ui/views/settings/update-section.slint
 msgid "Updates"

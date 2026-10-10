@@ -16,20 +16,22 @@ msgid "Search"
 msgstr "Suche"
 
 #: ui/app-window.slint ui/layout/sidebar.slint ui/views/radio-view.slint
+#: ui/views/settings/sidebar-section.slint
 msgid "Browse"
 msgstr "Durchsuchen"
 
 #: ui/app-window.slint ui/layout/sidebar.slint ui/views/favorites-view.slint
-#: ui/views/radio-view.slint
+#: ui/views/radio-view.slint ui/views/settings/sidebar-section.slint
 msgid "Favorites"
 msgstr "Favoriten"
 
 #: ui/app-window.slint ui/layout/sidebar.slint
+#: ui/views/settings/sidebar-section.slint
 msgid "My Library"
 msgstr "Meine Bibliothek"
 
 #: ui/app-window.slint ui/layout/sidebar.slint ui/views/radio-view.slint
-#: ui/views/recently-played-view.slint
+#: ui/views/recently-played-view.slint ui/views/settings/sidebar-section.slint
 msgid "Recently Played"
 msgstr "Zuletzt gespielt"
 
@@ -808,7 +810,7 @@ msgstr "Ordner"
 #: ui/components/grid/station-context-menu.slint
 #: ui/components/now-playing/play-button.slint
 #: ui/components/track-list/track-context-menu.slint
-#: ui/views/radio/tab-pills.slint
+#: ui/views/my-library/tab-pills.slint ui/views/radio/tab-pills.slint
 msgid "Play"
 msgstr "Abspielen"
 
@@ -1745,6 +1747,11 @@ msgstr "Umgewandelt"
 #: ui/layout/now-playing-bar.slint
 msgid "Play a random album"
 msgstr "Zufälliges Album abspielen"
+
+#: ui/layout/now-playing-bar.slint
+#, fuzzy
+msgid "Compact player"
+msgstr "Zuletzt gespielt"
 
 #. Translators: the action a click takes, expanding the sidebar
 #: ui/layout/sidebar.slint
@@ -2694,6 +2701,7 @@ msgid "The minimize, full player and close buttons in the miniplayer's corner."
 msgstr "Die Schaltflächen zum Minimieren, für den vollständigen Player und zum Schließen in der Ecke des Miniplayers."
 
 #: ui/views/settings/mini-player-section.slint
+#: ui/views/settings/overflow-menu-section.slint
 msgid "Album Backdrop"
 msgstr "Album-Hintergrund"
 
@@ -2993,12 +3001,23 @@ msgid "Player Bar"
 msgstr "Wiedergabeleiste"
 
 #: ui/views/settings/overflow-menu-section.slint
-msgid "Overflow Menu Buttons"
-msgstr "Überlaufmenü-Schaltflächen"
+#, fuzzy
+msgid "Desktop player bar"
+msgstr "am wenigsten gespielt"
 
 #: ui/views/settings/overflow-menu-section.slint
-msgid "Move selected buttons into a compact overflow menu in the player bar"
-msgstr "Ausgewählte Schaltflächen in ein kompaktes Überlaufmenü in der Wiedergabeleiste verschieben"
+#, fuzzy
+msgid "Checked buttons move into the ⋮ menu instead of showing on the bar"
+msgstr "Die Karte beim Pausieren entfernen, statt eine Pausenmarkierung anzuzeigen"
+
+#: ui/views/settings/overflow-menu-section.slint
+#, fuzzy
+msgid "Mini player"
+msgstr "Miniplayer"
+
+#: ui/views/settings/overflow-menu-section.slint
+msgid "Checked controls are hidden on the compact player strip"
+msgstr ""
 
 #: ui/views/settings/playback-section.slint
 msgid "Gapless Playback"
@@ -3188,6 +3207,19 @@ msgstr "Aktiviere zuerst oben Last.fm oder ListenBrainz"
 #: ui/views/settings/settings-tabs.slint
 msgid "No matching settings"
 msgstr "Keine passenden Einstellungen"
+
+#: ui/views/settings/sidebar-section.slint
+msgid "Sidebar"
+msgstr ""
+
+#: ui/views/settings/sidebar-section.slint
+#, fuzzy
+msgid "Sidebar sections"
+msgstr "Auswahl aufheben"
+
+#: ui/views/settings/sidebar-section.slint
+msgid "Hide sections you do not use. Search and Settings always stay visible."
+msgstr ""
 
 #: ui/views/settings/update-section.slint
 msgid "Updates"
