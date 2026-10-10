@@ -223,7 +223,12 @@ pub(super) fn row_at(offsets: &[f32], rows: &[Row], metrics: Metrics, y: f32) ->
 /// index of the stamped ones to walk. Worth the ask rather than the allocation, the panel calling
 /// this on a 33 ms tick.
 pub(super) fn sung_at(rows: &[Row], position_ms: f64) -> Option<usize> {
-    if rows.first().is_none_or(|row| row.at_ms.is_none()) {
+    let Some(first_at) = rows.first()?.at_ms else {
+        return None;
+    };
+    // Every line sharing one stamp is a broken export, not a followable sheet — treating it as
+    // timed would leave `partition_point` on the last row for the whole song.
+    if rows.iter().all(|row| row.at_ms == Some(first_at)) {
         return None;
     }
     let passed =

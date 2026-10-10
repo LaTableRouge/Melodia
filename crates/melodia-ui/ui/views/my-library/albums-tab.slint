@@ -13,6 +13,10 @@ export component MyLibraryAlbumsTab inherits Rectangle {
     in property <length> row-h;
     in property <length> gap;
 
+    init => {
+        grid.set-v-offset(Albums.grid-scroll-offset);
+    }
+
     grid := AlbumGrid {
         // Positioned rather than wrapped, so the scrollbar below reuses the same two
         // numbers instead of chasing a layout's padding.
@@ -28,6 +32,10 @@ export component MyLibraryAlbumsTab inherits Rectangle {
         go-to-artist(id) => { Albums.go-to-artist(id); }
         covers-generation: Albums.covers-generation;
         request-cover(p, g) => { Albums.request-cover(p, g) }
+    }
+
+    changed grid.v-offset => {
+        Albums.grid-scroll-offset = grid.v-offset;
     }
 
     if Albums.total-count == 0: GridEmptyState {

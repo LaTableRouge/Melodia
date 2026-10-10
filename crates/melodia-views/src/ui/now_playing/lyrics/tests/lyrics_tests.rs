@@ -68,6 +68,13 @@ fn a_repeated_stamp_sings_the_later_of_the_two_lines() {
 }
 
 #[test]
+fn a_sheet_whose_every_line_shares_one_stamp_sings_nothing() {
+    let rows = timed(&[0, 0, 0]);
+    assert_eq!(sung_at(&rows, 0.0), None);
+    assert_eq!(sung_at(&rows, 60_000.0), None);
+}
+
+#[test]
 fn an_untimed_sheet_sings_nothing() {
     let rows = vec![Row {
         kind: RowKind::Words,

@@ -11,6 +11,8 @@ export global Albums {
     // into a plural and `@tr` would spell the sentinel out, so that `Text` guards on `>= 0`.
     in-out property <int> total-count: -1;      // pre-filter album count
     in-out property <int> columns: 4;           // view-computed; always >= 1
+    // Survives grid ↔ detail swaps: the grid unmounts while a detail is open.
+    in-out property <length> grid-scroll-offset: 0;
     in-out property <string> filter;
     in-out property <string> sort-field: "name";   // "name" | "year" | "artist"
     in-out property <string> sort-dir: "asc";

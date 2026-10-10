@@ -45,6 +45,8 @@ export component LyricsPanel inherits Rectangle {
     property <int> suspend-ticks;
     // Where the viewport actually is, eased toward `target-y`. Written, never bound.
     property <length> scroll-y;
+    // Compared in the tick only — no `changed` on `Lyrics.rows` (see file header).
+    property <int> held-row-count: -1;
     property <length> target-y: max(0px,
         Lyrics.active-offset + Lyrics.active-height / 2 - sv.visible-height / 2);
 
@@ -288,6 +290,11 @@ export component LyricsPanel inherits Rectangle {
             // without a tick of its own a paused panel draws a page with nothing marked on it
             // until playback resumes.
             Lyrics.tick();
+            if (Lyrics.rows.length != root.held-row-count) {
+                root.held-row-count = Lyrics.rows.length;
+                root.scroll-y = root.target-y;
+                sv.viewport-y = -root.scroll-y;
+            }
             // A plain sheet, or the run-in before the first stamp: nothing to centre on, and the
             // reader owns the scroll in both.
             if (Lyrics.active-index < 0) {
