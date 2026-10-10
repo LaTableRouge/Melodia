@@ -112,6 +112,41 @@ impl Default for TrayFlags {
     }
 }
 
+/// Which sidebar sections the user hides. Search and Settings stay visible.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct NavFlags {
+    pub hide_browse: bool,
+    pub hide_favorites: bool,
+    pub hide_recently_played: bool,
+    pub hide_my_library: bool,
+}
+
+impl Default for NavFlags {
+    fn default() -> Self {
+        Self {
+            hide_browse: false,
+            hide_favorites: false,
+            hide_recently_played: false,
+            hide_my_library: false,
+        }
+    }
+}
+
+impl NavFlags {
+    /// Whether `idx` may appear in the sidebar (`nav.slint` indices).
+    #[must_use]
+    pub fn section_visible(&self, idx: i32) -> bool {
+        match idx {
+            1 => !self.hide_browse,
+            2 => !self.hide_favorites,
+            8 => !self.hide_recently_played,
+            3 => !self.hide_my_library,
+            _ => true,
+        }
+    }
+}
+
 /// In-app layout / visual toggles.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]

@@ -70,6 +70,8 @@ export global WindowChrome {
     // back to the geometry the full player last settled at, which Rust holds from the moment the
     // miniplayer took over, across a relaunch included.
     callback restore-full-player();
+    // Resize into the miniplayer band; the switch picks it up like a manual shrink.
+    callback enter-mini-player();
     callback close-window();
     callback toggle-always-on-top();
     // Kept in a cell the winit `MouseInput` filter checks before starting an OS-level window move,

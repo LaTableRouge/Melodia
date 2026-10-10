@@ -318,6 +318,24 @@ export global Settings {
     in-out property <bool> overflow-quality;
     callback overflow-buttons-changed(string /*id*/, bool /*overflow-on*/);
 
+    // Miniplayer: checked = hide the control on the compact strip.
+    in-out property <bool> mini-overflow-shuffle;
+    in-out property <bool> mini-overflow-repeat;
+    in-out property <bool> mini-overflow-favorite;
+    in-out property <bool> mini-overflow-pin;
+    in-out property <bool> mini-overflow-backdrop;
+    callback mini-overflow-buttons-changed(string /*id*/, bool /*hidden*/);
+
+    // Sidebar sections the user hides (`nav.slint` indices). Search and Settings stay visible.
+    in-out property <bool> nav-hide-browse;
+    in-out property <bool> nav-hide-favorites;
+    in-out property <bool> nav-hide-recently-played;
+    in-out property <bool> nav-hide-my-library;
+    callback nav-hide-browse-changed(bool);
+    callback nav-hide-favorites-changed(bool);
+    callback nav-hide-recently-played-changed(bool);
+    callback nav-hide-my-library-changed(bool);
+
     // `language-names` carries native-name labels, always in the language's own script and never
     // re-translated; `language-codes` the matching `SUPPORTED_LOCALES` codes. The change callback
     // resolves idx → code and calls `slint::select_bundled_translation` synchronously, which

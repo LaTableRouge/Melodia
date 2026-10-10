@@ -153,6 +153,81 @@ pub(super) fn wire_overflow_buttons_changed(ui: &AppWindow, state: &AppState) {
     });
 }
 
+pub(super) fn wire_mini_overflow_buttons_changed(ui: &AppWindow, state: &AppState) {
+    let s = state.clone();
+    ui.global::<Settings>().on_mini_overflow_buttons_changed(move |id, hidden| {
+        let id_str = id.to_string();
+        s.persist_blocking("persist mini_overflow_buttons", move |state| {
+            library::settings::set_mini_overflow_button(state, id_str, hidden)
+        });
+    });
+}
+
+pub(super) fn wire_nav_visibility_changed(ui: &AppWindow, state: &AppState) {
+    use melodia_ui::Nav;
+
+    let leave_section = |ui: &AppWindow, section: i32, hide: bool| {
+        if !hide {
+            return;
+        }
+        let nav = ui.global::<Nav>();
+        if nav.get_selected_index() == section {
+            nav.set_selected_index(0);
+        }
+    };
+
+    {
+        let s = state.clone();
+        let weak = ui.as_weak();
+        ui.global::<Settings>().on_nav_hide_browse_changed(move |hide| {
+            s.persist_blocking("nav hide browse", move |st| library::settings::set_hide_browse(st, hide))
+                .ok();
+            if let Some(ui) = weak.upgrade() {
+                leave_section(&ui, 1, hide);
+            }
+        });
+    }
+    {
+        let s = state.clone();
+        let weak = ui.as_weak();
+        ui.global::<Settings>().on_nav_hide_favorites_changed(move |hide| {
+            s.persist_blocking("nav hide favorites", move |st| {
+                library::settings::set_hide_favorites(st, hide)
+            })
+            .ok();
+            if let Some(ui) = weak.upgrade() {
+                leave_section(&ui, 2, hide);
+            }
+        });
+    }
+    {
+        let s = state.clone();
+        let weak = ui.as_weak();
+        ui.global::<Settings>().on_nav_hide_recently_played_changed(move |hide| {
+            s.persist_blocking("nav hide recently played", move |st| {
+                library::settings::set_hide_recently_played(st, hide)
+            })
+            .ok();
+            if let Some(ui) = weak.upgrade() {
+                leave_section(&ui, 8, hide);
+            }
+        });
+    }
+    {
+        let s = state.clone();
+        let weak = ui.as_weak();
+        ui.global::<Settings>().on_nav_hide_my_library_changed(move |hide| {
+            s.persist_blocking("nav hide my library", move |st| {
+                library::settings::set_hide_my_library(st, hide)
+            })
+            .ok();
+            if let Some(ui) = weak.upgrade() {
+                leave_section(&ui, 3, hide);
+            }
+        });
+    }
+}
+
 #[cfg(test)]
 #[path = "tests/window_settings_tests.rs"]
 mod tests;

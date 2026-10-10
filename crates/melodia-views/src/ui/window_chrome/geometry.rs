@@ -332,6 +332,21 @@ pub fn release_full_player() {
 ///
 /// Placed only where winit ever reported a position, so Wayland keeps the compositor's placement.
 /// Nothing held falls back to the first-launch geometry.
+/// Resize into the miniplayer band. Same threshold the responsive switch uses.
+pub fn enter_mini_player(app: &AppWindow) {
+    if app.invoke_miniplayer_mounted() {
+        return;
+    }
+    let window = app.window();
+    let _ = window.with_winit_window(|w| {
+        if w.is_maximized() {
+            w.set_maximized(false);
+        }
+    });
+    hold_full_player();
+    window.set_size(LogicalSize::new(520.0, 230.0));
+}
+
 pub fn restore_full_player(app: &AppWindow) {
     let placement = (*held().lock()).unwrap_or_else(Placement::first_launch);
     let (size, position) = logical_placement(placement.geom, MIN_FULL_PLAYER);

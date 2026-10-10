@@ -392,6 +392,17 @@ export component NowPlayingBar inherits Rectangle {
                 }
                 VerticalLayout {
                     alignment: center;
+                    IconButton {
+                        icon: "picture_in_picture_alt";
+                        press-shrink: true;
+                        diameter: root.btn-d;
+                        icon-size: root.btn-icon-d;
+                        tooltip-text: @tr("Compact player");
+                        clicked => { WindowChrome.enter-mini-player(); }
+                    }
+                }
+                VerticalLayout {
+                    alignment: center;
                     VolumePopup {
                         diameter: root.btn-d;
                         icon-size: clamp(root.bar-w * 0.035, 22px, 22px);

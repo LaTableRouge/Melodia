@@ -148,6 +148,16 @@ pub fn install(ui: &AppWindow, state: &AppState) -> Result<AppearanceHandles, Ap
         g.set_overflow_pin(v.iter().any(|x| x == "pin"));
         g.set_overflow_queue(v.iter().any(|x| x == "queue"));
         g.set_overflow_quality(v.iter().any(|x| x == "quality"));
+        let m = &settings.mini_overflow_buttons;
+        g.set_mini_overflow_shuffle(m.iter().any(|x| x == "shuffle"));
+        g.set_mini_overflow_repeat(m.iter().any(|x| x == "repeat"));
+        g.set_mini_overflow_favorite(m.iter().any(|x| x == "favorite"));
+        g.set_mini_overflow_pin(m.iter().any(|x| x == "pin"));
+        g.set_mini_overflow_backdrop(m.iter().any(|x| x == "backdrop"));
+        g.set_nav_hide_browse(settings.nav.hide_browse);
+        g.set_nav_hide_favorites(settings.nav.hide_favorites);
+        g.set_nav_hide_recently_played(settings.nav.hide_recently_played);
+        g.set_nav_hide_my_library(settings.nav.hide_my_library);
     }
 
     // The boot migration for a `settings.json` written before `theme_preferences`
@@ -184,6 +194,8 @@ pub fn install(ui: &AppWindow, state: &AppState) -> Result<AppearanceHandles, Ap
     window_settings::wire_titlebar_button_side_changed(ui, state);
     window_settings::wire_mini_player_button_style_changed(ui, state);
     window_settings::wire_overflow_buttons_changed(ui, state);
+    window_settings::wire_mini_overflow_buttons_changed(ui, state);
+    window_settings::wire_nav_visibility_changed(ui, state);
     window_settings::wire_close_to_tray_changed(ui, state);
     window_border::wire(ui, state);
 

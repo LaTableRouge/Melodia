@@ -79,12 +79,15 @@ export component OverflowMenuSection inherits Rectangle {
                                         SettingsPage.search-query);
     }
 
-    property <string> overflow-label: @tr("Overflow Menu Buttons");
-    property <string> overflow-desc: @tr("Move selected buttons into a compact overflow menu in the player bar");
+    property <string> overflow-label: @tr("Desktop player bar");
+    property <string> overflow-desc: @tr("Checked buttons move into the ⋮ menu instead of showing on the bar");
+    property <string> mini-label: @tr("Mini player");
+    property <string> mini-desc: @tr("Checked controls are hidden on the compact player strip");
 
     property <bool> show-overflow: row-visible(overflow-label, overflow-desc);
+    property <bool> show-mini: row-visible(mini-label, mini-desc);
 
-    out property <bool> has-matches: show-overflow;
+    out property <bool> has-matches: show-overflow || show-mini;
 
     VerticalLayout {
     if has-matches: SectionCard {
@@ -148,6 +151,57 @@ export component OverflowMenuSection inherits Rectangle {
                         label: @tr("Signal Path");
                         checked <=> Settings.overflow-quality;
                         toggled => { Settings.overflow-buttons-changed(self.id, self.checked); }
+                    }
+                }
+            }
+        }
+
+        if root.show-mini: SettingRowStacked {
+            icon: "picture_in_picture_alt";
+            label: root.mini-label;
+            description: root.mini-desc;
+
+            GridLayout {
+                spacing: Theme.pad-xs;
+                Row {
+                    OverflowCheckCell {
+                        id: "shuffle";
+                        icon: "shuffle";
+                        label: @tr("Shuffle");
+                        checked <=> Settings.mini-overflow-shuffle;
+                        toggled => { Settings.mini-overflow-buttons-changed(self.id, self.checked); }
+                    }
+                    OverflowCheckCell {
+                        id: "repeat";
+                        icon: "repeat";
+                        label: @tr("Repeat");
+                        checked <=> Settings.mini-overflow-repeat;
+                        toggled => { Settings.mini-overflow-buttons-changed(self.id, self.checked); }
+                    }
+                }
+                Row {
+                    OverflowCheckCell {
+                        id: "favorite";
+                        icon: "favorite";
+                        label: @tr("Favorite");
+                        checked <=> Settings.mini-overflow-favorite;
+                        toggled => { Settings.mini-overflow-buttons-changed(self.id, self.checked); }
+                    }
+                    OverflowCheckCell {
+                        id: "pin";
+                        icon: "push_pin";
+                        label: @tr("Pin on Top");
+                        checked <=> Settings.mini-overflow-pin;
+                        toggled => { Settings.mini-overflow-buttons-changed(self.id, self.checked); }
+                    }
+                }
+                Row {
+                    OverflowCheckCell {
+                        id: "backdrop";
+                        icon: "tonality";
+                        label: @tr("Album Backdrop");
+                        checked <=> Settings.mini-overflow-backdrop;
+                        toggled => { Settings.mini-overflow-buttons-changed(self.id, self.checked); }
                     }
                 }
             }

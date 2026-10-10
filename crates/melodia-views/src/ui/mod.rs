@@ -31,6 +31,7 @@ pub mod mosaic_hero;
 pub mod my_library;
 pub mod name_palette;
 pub mod nav_history;
+pub mod nav_sections;
 pub mod nav_transition;
 pub mod now_playing;
 pub mod now_playing_artwork;

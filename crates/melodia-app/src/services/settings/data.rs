@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 use super::about::{DiagnosticsFlags, OnboardingFlags, SupportFlags, UpdateFlags};
-use super::interface::{BackdropFlags, LayoutFlags, MotionFlags, TrayFlags, WindowFlags};
+use super::interface::{BackdropFlags, LayoutFlags, MotionFlags, NavFlags, TrayFlags, WindowFlags};
 use super::library::LibraryFlags;
 use super::playback::{
     CrossfadeFlags, EqualizerFlags, OutputFlags, PlaybackFlags, QueueFlags, ReplayGainFlags,
@@ -147,6 +147,11 @@ pub struct SettingsData {
     pub theme_preferences: HashMap<String, ThemePreference>,
     #[serde(default)]
     pub overflow_buttons: Vec<String>,
+    /// Miniplayer controls moved off the strip (same ids as [`Self::overflow_buttons`] where they overlap).
+    #[serde(default)]
+    pub mini_overflow_buttons: Vec<String>,
+    #[serde(default)]
+    pub nav: NavFlags,
     #[serde(default = "default_locale")]
     pub locale: String,
     #[serde(flatten)]
@@ -222,6 +227,8 @@ impl Default for SettingsData {
             dynamic_color_style: "none".to_owned(),
             theme_preferences: HashMap::new(),
             overflow_buttons: Vec::new(),
+            mini_overflow_buttons: Vec::new(),
+            nav: NavFlags::default(),
             locale: default_locale(),
             playback: PlaybackFlags::default(),
             equalizer: EqualizerFlags::default(),

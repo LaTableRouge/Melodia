@@ -1,4 +1,5 @@
 import { Player } from "../../globals/player.slint";
+import { Settings } from "../../settings.slint";
 import { MiniPlayer, WindowChrome } from "../../globals/shell.slint";
 import { TooltipSide } from "../tooltip.slint";
 import { MetaChip } from "../meta-chip.slint";
@@ -94,7 +95,7 @@ export component MiniTrailingControls inherits HorizontalLayout {
         }
     }
     // Collapsed where the window manager gives no way to keep a window on top.
-    if WindowChrome.always-on-top-supported: VerticalLayout {
+    if WindowChrome.always-on-top-supported && !Settings.mini-overflow-pin: VerticalLayout {
         alignment: center;
         MiniIconButton {
             icon: "push_pin";
@@ -107,7 +108,7 @@ export component MiniTrailingControls inherits HorizontalLayout {
             clicked => { WindowChrome.toggle-always-on-top(); }
         }
     }
-    VerticalLayout {
+    if !Settings.mini-overflow-backdrop: VerticalLayout {
         alignment: center;
         MiniIconButton {
             icon: "tonality";
@@ -120,7 +121,7 @@ export component MiniTrailingControls inherits HorizontalLayout {
             clicked => { root.toggle-backdrop(); }
         }
     }
-    VerticalLayout {
+    if !Settings.mini-overflow-favorite: VerticalLayout {
         alignment: center;
         MiniIconButton {
             icon: Player.vm.track.is_favorite ? "favorite" : "favorite_border";
@@ -158,7 +159,7 @@ export component MiniTimeline inherits HorizontalLayout {
 
     // Both pills open beside: the controls paint over this row, so one above lands under them.
     // Shuffle's opens onto the seek row, declared after it, hence lifted over it.
-    VerticalLayout {
+    if !Settings.mini-overflow-shuffle: VerticalLayout {
         z: 1;
         alignment: center;
         MiniIconButton {
@@ -191,7 +192,7 @@ export component MiniTimeline inherits HorizontalLayout {
         }
     }
 
-    VerticalLayout {
+    if !Settings.mini-overflow-repeat: VerticalLayout {
         alignment: center;
         MiniIconButton {
             icon: Player.queue.repeat_mode == "one" ? "repeat_one" : "repeat";

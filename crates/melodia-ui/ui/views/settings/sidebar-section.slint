@@ -1,0 +1,94 @@
+import { Theme } from "../../theme.slint";
+import { Settings } from "../../settings.slint";
+import { SettingsPage } from "../../globals/settings-page.slint";
+import { SectionCard } from "../../components/settings/section-card.slint";
+import { SettingRowStacked } from "../../components/settings/setting-row-stacked.slint";
+import { Checkbox } from "../../components/checkbox.slint";
+
+component NavHideCell inherits Rectangle {
+    in property <string> label;
+    in-out property <bool> checked;
+    callback toggled();
+
+    background: touch.has-hover ? Theme.surface1 : transparent;
+    border-radius: Theme.radius-sm;
+    animate background { duration: 100ms; easing: ease-in-out; }
+
+    HorizontalLayout {
+        padding: Theme.pad-sm;
+        spacing: Theme.pad-sm;
+        alignment: stretch;
+        VerticalLayout {
+            alignment: center;
+            Checkbox { checked: root.checked; unchecked-border: Theme.text-muted; }
+        }
+        VerticalLayout {
+            alignment: center;
+            horizontal-stretch: 1;
+            Text {
+                text: root.label;
+                color: Theme.text;
+                font-size: Theme.font-size-sm;
+            }
+        }
+    }
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.toggled(); }
+    }
+}
+
+export component SidebarSection inherits Rectangle {
+    background: transparent;
+    horizontal-stretch: 1;
+    vertical-stretch: 0;
+
+    in property <string> tab-name;
+
+    property <string> card-title: @tr("Sidebar");
+    property <string> row-label: @tr("Sidebar sections");
+    property <string> row-desc: @tr("Hide sections you do not use. Search and Settings always stay visible.");
+
+    property <bool> show-row: SettingsPage.row-visible(
+        root.tab-name, root.card-title, root.row-label + " " + root.row-desc, SettingsPage.search-query);
+
+    out property <bool> has-matches: show-row;
+
+    VerticalLayout {
+        if root.show-row: SectionCard {
+            title: root.card-title;
+            SettingRowStacked {
+                icon: "view_sidebar";
+                label: root.row-label;
+                description: root.row-desc;
+                GridLayout {
+                    spacing: Theme.pad-xs;
+                    Row {
+                        NavHideCell {
+                            label: @tr("Browse");
+                            checked: !Settings.nav-hide-browse;
+                            toggled => { Settings.nav-hide-browse-changed(!Settings.nav-hide-browse); }
+                        }
+                        NavHideCell {
+                            label: @tr("Favorites");
+                            checked: !Settings.nav-hide-favorites;
+                            toggled => { Settings.nav-hide-favorites-changed(!Settings.nav-hide-favorites); }
+                        }
+                    }
+                    Row {
+                        NavHideCell {
+                            label: @tr("Recently Played");
+                            checked: !Settings.nav-hide-recently-played;
+                            toggled => { Settings.nav-hide-recently-played-changed(!Settings.nav-hide-recently-played); }
+                        }
+                        NavHideCell {
+                            label: @tr("My Library");
+                            checked: !Settings.nav-hide-my-library;
+                            toggled => { Settings.nav-hide-my-library-changed(!Settings.nav-hide-my-library); }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

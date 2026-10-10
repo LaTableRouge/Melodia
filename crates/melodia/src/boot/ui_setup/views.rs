@@ -95,9 +95,14 @@ pub fn install_views(
         // written by a released build still holds them, and they route nowhere.
         // 10 routes only while Radio is switched on, so the two folds compose:
         // they answer different questions and neither belongs inside the other.
-        let idx = ui::radio::fold_disabled_nav_index(
-            ui::my_library::fold_retired_nav_index(vs.last_nav_index),
-            state.radio_enabled.get(),
+        let settings = services::settings::read_settings(&state.paths)
+            .unwrap_or_else(|_| services::settings::SettingsData::default());
+        let idx = ui::nav_sections::fold_hidden_nav_index(
+            ui::radio::fold_disabled_nav_index(
+                ui::my_library::fold_retired_nav_index(vs.last_nav_index),
+                state.radio_enabled.get(),
+            ),
+            &settings.nav,
         );
         if (0..=services::view_state::MAX_NAV_INDEX).contains(&idx) {
             app.global::<Nav>().set_selected_index(idx);

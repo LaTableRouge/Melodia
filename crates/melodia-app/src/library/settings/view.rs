@@ -48,6 +48,20 @@ fn write_overflow_button(paths: &Paths, id: String, overflow_on: bool) -> Result
     })
 }
 
+/// Persist a miniplayer control toggle. Same id / overflow-on shape as [`set_overflow_button`].
+pub fn set_mini_overflow_button(
+    state: &AppState,
+    id: String,
+    hidden: bool,
+) -> Result<(), AppError> {
+    services::settings::mutate_settings(&state.paths, move |s| {
+        s.mini_overflow_buttons.retain(|x| x != &id);
+        if hidden {
+            s.mini_overflow_buttons.push(id);
+        }
+    })
+}
+
 /// Snap an arbitrary radius to the nearest chip preset (0, 6, 8, 10, 15). The chip group is the
 /// only input path, but `settings.json` is user-editable and a future preset addition could leave
 /// older values stranded between chips. The snap keeps the chip selection and the painted radius
