@@ -17,8 +17,8 @@ pub async fn get_albums(state: &AppState) -> Result<Vec<album::AlbumStats>, AppE
     queries::album::get_all_albums(&state.db).await
 }
 
-/// Each album's earliest on-disk `date_modified`, for the grid's date-added sort — folder time,
-/// not indexation. Kept out of `AlbumStats` so the view every other album query reads stays as it is.
+/// Each album's earliest `date_added` among its tracks, for the grid's date-added sort. Kept out
+/// of `AlbumStats` so the view every other album query reads stays as it is.
 pub async fn get_album_dates_added(state: &AppState) -> Result<HashMap<i64, String>, AppError> {
     queries::album::get_album_dates_added(&state.db).await
 }

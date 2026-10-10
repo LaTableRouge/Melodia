@@ -89,9 +89,9 @@ async fn random_album_id_skips_an_album_with_no_tracks() -> Result<(), AppError>
     Ok(())
 }
 
-/// An album's date is the earliest file mtime among its tracks, not when the scanner indexed them.
+/// File mtimes must not affect the sort — only when the library first indexed the tracks.
 #[tokio::test]
-async fn get_album_dates_added_uses_the_earliest_file_mtime() -> Result<(), AppError> {
+async fn get_album_dates_added_uses_the_earliest_date_added() -> Result<(), AppError> {
     let db = setup_seeded_db().await?;
     let one = album_id_named(&db, "Album One").await?;
     let two = album_id_named(&db, "Album Two").await?;
@@ -104,16 +104,23 @@ async fn get_album_dates_added_uses_the_earliest_file_mtime() -> Result<(), AppE
     let track = a_track_on(&db, one).await?;
     sqlx::query(
         "UPDATE tracks SET date_modified = '2018-03-15T12:00:00+00:00', \
-         date_added = '2025-06-01T00:00:00+00:00' WHERE id = ?",
+         date_added = '2024-01-01T00:00:00+00:00' WHERE id = ?",
     )
     .bind(track)
+    .execute(db.write())
+    .await?;
+    sqlx::query(
+        "UPDATE tracks SET date_modified = '1999-01-01T00:00:00+00:00', \
+         date_added = '2025-01-01T00:00:00+00:00' WHERE album_id = ?",
+    )
+    .bind(two)
     .execute(db.write())
     .await?;
 
     let dates = queries::album::get_album_dates_added(&db).await?;
 
-    assert_eq!(dates.get(&one).map(String::as_str), Some("2018-03-15T12:00:00+00:00"));
-    assert_eq!(dates.get(&two).map(String::as_str), Some("2020-01-01T00:00:00+00:00"));
+    assert_eq!(dates.get(&one).map(String::as_str), Some("2024-01-01T00:00:00+00:00"));
+    assert_eq!(dates.get(&two).map(String::as_str), Some("2025-01-01T00:00:00+00:00"));
     Ok(())
 }
 

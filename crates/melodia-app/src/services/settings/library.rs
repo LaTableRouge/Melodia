@@ -50,6 +50,8 @@ pub struct LibraryFlags {
     pub tags_backfilled: bool,
     /// Whether albums split by per-track performers (no album-artist tag) have been merged once.
     pub albums_consolidated_by_folder: bool,
+    /// Second pass: merge by folder + title (ignoring year) and align grid artist to first track.
+    pub albums_unified_without_album_artist_v2: bool,
 }
 
 impl Default for LibraryFlags {
@@ -61,6 +63,7 @@ impl Default for LibraryFlags {
             ratings_imported_from_tags: false,
             tags_backfilled: false,
             albums_consolidated_by_folder: false,
+            albums_unified_without_album_artist_v2: false,
         }
     }
 }

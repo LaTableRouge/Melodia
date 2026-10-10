@@ -822,7 +822,7 @@ async fn a_multi_performer_release_in_one_folder_stays_one_album() -> Result<(),
     )
     .fetch_one(db.read())
     .await?;
-    assert_eq!(artist.0, "Various Artists");
+    assert_eq!(artist.0, "Artist A");
     Ok(())
 }
 

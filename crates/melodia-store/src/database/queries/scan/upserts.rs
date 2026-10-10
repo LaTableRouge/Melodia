@@ -8,7 +8,7 @@ use melodia_core::error::AppError;
 
 use crate::database::queries::artist::{UNKNOWN_ARTIST_ID, VARIOUS_ARTISTS_NAME};
 
-use super::lookups::find_album_in_folder_by_name_and_year;
+use super::lookups::find_album_in_folder_by_name;
 use super::name_cache::NameCache;
 
 /// The statements a credit rewrite is made of, one per table.
@@ -57,16 +57,16 @@ pub fn album_artist_name_for(meta: &ExtractedMetadata) -> &str {
 /// Ingest-only cache: albums keyed by folder while their tracks are not committed yet.
 #[derive(Default)]
 pub struct AlbumFolderCache {
-    by_key: std::collections::HashMap<(String, i64, Option<i32>), i64>,
+    by_key: std::collections::HashMap<(String, i64), i64>,
 }
 
 impl AlbumFolderCache {
-    pub fn get(&self, name: &str, folder_id: i64, year: Option<i32>) -> Option<i64> {
-        self.by_key.get(&(name.to_owned(), folder_id, year)).copied()
+    pub fn get(&self, name: &str, folder_id: i64) -> Option<i64> {
+        self.by_key.get(&(name.to_owned(), folder_id)).copied()
     }
 
-    pub fn insert(&mut self, name: &str, folder_id: i64, year: Option<i32>, album_id: i64) {
-        self.by_key.insert((name.to_owned(), folder_id, year), album_id);
+    pub fn insert(&mut self, name: &str, folder_id: i64, album_id: i64) {
+        self.by_key.insert((name.to_owned(), folder_id), album_id);
     }
 }
 
@@ -419,45 +419,10 @@ async fn apply_album_release_fields(
     Ok(())
 }
 
-/// Point an album's grouping artist at [`VARIOUS_ARTISTS_NAME`].
-pub async fn promote_album_to_various_artists(
-    tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
-    album_id: i64,
-    names: &mut NameCache,
-) -> Result<(), AppError> {
-    let va_id = names.artist(tx, VARIOUS_ARTISTS_NAME, UNKNOWN_ARTIST_ID).await?;
-    sqlx::query("UPDATE albums SET artist_id = ? WHERE id = ?")
-        .bind(va_id)
-        .bind(album_id)
-        .execute(&mut **tx)
-        .await?;
-    let credit = ArtistCredit::from_name(VARIOUS_ARTISTS_NAME);
-    replace_album_credits(
-        tx,
-        album_id,
-        &credit,
-        va_id,
-        CreditDetails { sort_name: None, mbids: &[] },
-        names,
-    )
-    .await
-}
-
-async fn assign_album_various_artists(
-    tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
-    album_id: i64,
-    meta: &ExtractedMetadata,
-    names: &mut NameCache,
-) -> Result<(), AppError> {
-    promote_album_to_various_artists(tx, album_id, names).await?;
-    apply_album_release_fields(tx, album_id, meta).await
-}
-
 /// Find or attach an album row for a track being ingested.
 ///
 /// When the file carries no album-artist tag, other tracks in the same folder with the same title
-/// and year share one row; a second primary performer upgrades the release to
-/// [`VARIOUS_ARTISTS_NAME`].
+/// share one row; the grid shows the first track's performer after [`crate::database::queries::album::align_album_performer_from_first_track`].
 pub async fn resolve_album_for_track(
     tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
     album_name: &str,
@@ -482,43 +447,32 @@ pub async fn resolve_album_for_track(
     };
 
     if meta.album_artist.is_empty() {
-        let year = meta.year;
         if let Some(ref mut cache) = folder_cache {
-            if let Some(id) = cache.get(album_name, folder_id, year) {
-                let existing_artist: i64 =
-                    sqlx::query_scalar("SELECT artist_id FROM albums WHERE id = ?")
-                        .bind(id)
-                        .fetch_one(&mut **tx)
-                        .await?;
-                if album_artist_id != UNKNOWN_ARTIST_ID && existing_artist != album_artist_id {
-                    assign_album_various_artists(tx, id, meta, names).await?;
-                } else {
-                    apply_album_release_fields(tx, id, meta).await?;
-                }
+            if let Some(id) = cache.get(album_name, folder_id) {
+                apply_album_release_fields(tx, id, meta).await?;
                 return Ok(Some(id));
             }
         }
-        if let Some((existing_id, existing_artist_id)) =
-            find_album_in_folder_by_name_and_year(tx, album_name, year, folder_id).await?
+        if let Some((existing_id, _existing_artist_id)) =
+            find_album_in_folder_by_name(tx, album_name, folder_id).await?
         {
-            if existing_artist_id != album_artist_id {
-                assign_album_various_artists(tx, existing_id, meta, names).await?;
-            } else {
-                apply_album_release_fields(tx, existing_id, meta).await?;
-            }
+            apply_album_release_fields(tx, existing_id, meta).await?;
             if let Some(ref mut cache) = folder_cache {
-                cache.insert(album_name, folder_id, year, existing_id);
+                cache.insert(album_name, folder_id, existing_id);
             }
             return Ok(Some(existing_id));
         }
+
+        let album_id = upsert_album(tx, album_name, album_artist_id, &credit, meta, names).await?;
+        if let Some(id) = album_id
+            && let Some(ref mut cache) = folder_cache
+        {
+            cache.insert(album_name, folder_id, id);
+        }
+        return Ok(album_id);
     }
 
     let album_id = upsert_album(tx, album_name, album_artist_id, &credit, meta, names).await?;
-    if let Some(id) = album_id
-        && let Some(ref mut cache) = folder_cache
-    {
-        cache.insert(album_name, folder_id, meta.year, id);
-    }
     Ok(album_id)
 }
 

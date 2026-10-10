@@ -74,14 +74,12 @@ pub async fn get_all_albums(db: &DbPool) -> Result<Vec<album::AlbumStats>, AppEr
     Ok(albums)
 }
 
-/// Each album's folder date, as the RFC 3339 `tracks.date_modified` text the scan took off the
-/// file — not `date_added`, which is indexation time. Lexical order is chronological. The earliest
-/// track in the album, so a whole folder dropped at once sorts as one arrival. An album with no
-/// dated tracks has no entry.
+/// Each album's library arrival, as the earliest RFC 3339 `tracks.date_added` among its tracks.
+/// Lexical order is chronological. Tag edits and on-disk mtimes do not move an album in this sort.
 pub async fn get_album_dates_added(db: &DbPool) -> Result<HashMap<i64, String>, AppError> {
     let rows: Vec<(i64, String)> = sqlx::query_as(
-        "SELECT album_id, MIN(date_modified) FROM tracks
-          WHERE album_id IS NOT NULL AND date_modified IS NOT NULL
+        "SELECT album_id, MIN(date_added) FROM tracks
+          WHERE album_id IS NOT NULL
           GROUP BY album_id",
     )
     .fetch_all(db.read())
@@ -210,39 +208,93 @@ pub async fn clear_release_tags(
     Ok(())
 }
 
-/// Merge album rows that share a title, year, and folder but were split by per-track performers.
+/// For albums whose tracks all lack an album-artist tag, point the album row at the first
+/// track's performer (list order) so the grid subtitle matches the first song's **Interprète**.
+pub async fn align_album_performer_from_first_track(
+    tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+) -> Result<u32, AppError> {
+    use crate::database::queries::scan::{CreditDetails, NameCache, replace_album_credits};
+
+    let album_ids = sqlx::query_scalar::<_, i64>(
+        "SELECT al.id FROM albums al
+         WHERE EXISTS (SELECT 1 FROM tracks t WHERE t.album_id = al.id)
+           AND NOT EXISTS (
+             SELECT 1 FROM tracks t
+             WHERE t.album_id = al.id AND COALESCE(t.album_artist, '') <> ''
+           )",
+    )
+    .fetch_all(&mut **tx)
+    .await?;
+
+    let mut names = NameCache::default();
+    let mut updated = 0u32;
+    for album_id in album_ids {
+        let Some((artist_id, artist_name)): Option<(i64, String)> = sqlx::query_as(
+            "SELECT t.artist_id, a.name FROM tracks t
+             JOIN artists a ON a.id = t.artist_id
+             WHERE t.album_id = ?
+             ORDER BY t.sort_key ASC, t.id ASC
+             LIMIT 1",
+        )
+        .bind(album_id)
+        .fetch_optional(&mut **tx)
+        .await?
+        else {
+            continue;
+        };
+
+        sqlx::query("UPDATE albums SET artist_id = ?, artist_credit = NULL WHERE id = ?")
+            .bind(artist_id)
+            .bind(album_id)
+            .execute(&mut **tx)
+            .await?;
+
+        let credit = melodia_core::entities::artist::ArtistCredit::from_name(&artist_name);
+        replace_album_credits(
+            tx,
+            album_id,
+            &credit,
+            artist_id,
+            CreditDetails { sort_name: None, mbids: &[] },
+            &mut names,
+        )
+        .await?;
+        updated += 1;
+    }
+    Ok(updated)
+}
+
+/// Merge album rows that share a title and folder but were split by per-track performers.
 ///
 /// Returns how many redundant album rows were retired. Idempotent once a folder holds a single row
 /// per title.
 pub async fn consolidate_split_albums_in_folders(
     tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
 ) -> Result<u32, AppError> {
-    use crate::database::queries::artist::VARIOUS_ARTISTS_NAME;
-    use crate::database::queries::scan::{NameCache, promote_album_to_various_artists, prune_orphans};
+    use crate::database::queries::scan::prune_orphans;
 
-    let groups = sqlx::query_as::<_, (String, Option<i32>, i64)>(
-        "SELECT al.name, al.year, t.folder_id
+    let groups = sqlx::query_as::<_, (String, i64)>(
+        "SELECT al.name, t.folder_id
          FROM albums al
          JOIN tracks t ON t.album_id = al.id
-         GROUP BY al.name COLLATE NOCASE, al.year, t.folder_id
+         GROUP BY al.name COLLATE NOCASE, t.folder_id
          HAVING COUNT(DISTINCT al.id) > 1",
     )
     .fetch_all(&mut **tx)
     .await?;
 
     let mut retired = 0u32;
-    for (name, year, folder_id) in groups {
+    for (name, folder_id) in groups {
         let rows = sqlx::query_as::<_, (i64, i64)>(
             "SELECT al.id, COUNT(t.id) AS track_count
              FROM albums al
              JOIN tracks t ON t.album_id = al.id AND t.folder_id = ?
-             WHERE al.name = ? COLLATE NOCASE AND (al.year IS NOT DISTINCT FROM ?)
+             WHERE al.name = ? COLLATE NOCASE
              GROUP BY al.id
              ORDER BY track_count DESC, al.id ASC",
         )
         .bind(folder_id)
         .bind(&name)
-        .bind(year)
         .fetch_all(&mut **tx)
         .await?;
 
@@ -264,24 +316,7 @@ pub async fn consolidate_split_albums_in_folders(
         }
     }
 
-    let mut names = NameCache::default();
-    let promote = sqlx::query_scalar::<_, i64>(
-        "SELECT t.album_id
-         FROM tracks t
-         JOIN albums al ON al.id = t.album_id
-         JOIN artists a ON a.id = al.artist_id
-         WHERE a.name <> ?
-         GROUP BY t.album_id
-         HAVING COUNT(DISTINCT t.artist_id) > 1",
-    )
-    .bind(VARIOUS_ARTISTS_NAME)
-    .fetch_all(&mut **tx)
-    .await?;
-
-    for album_id in promote {
-        promote_album_to_various_artists(tx, album_id, &mut names).await?;
-    }
-
+    align_album_performer_from_first_track(tx).await?;
     prune_orphans(tx).await?;
     Ok(retired)
 }

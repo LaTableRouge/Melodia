@@ -29,8 +29,8 @@ pub use name_cache::NameCache;
 pub use sort_key::to_natural_sort_key;
 pub use upserts::{
     AlbumFolderCache, CreditDetails, album_artist_name_for, album_credit_for,
-    promote_album_to_various_artists, resolve_album_for_track, upsert_album, upsert_artist,
-    upsert_genre,
+    replace_album_credits, resolve_album_for_track, upsert_album,
+    upsert_artist, upsert_genre,
 };
 
 /// Resolved foreign-key IDs for a track being inserted during a scan.

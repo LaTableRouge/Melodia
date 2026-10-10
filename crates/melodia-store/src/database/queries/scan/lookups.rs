@@ -99,21 +99,19 @@ pub async fn get_move_candidates(db: &crate::database::DbPool) -> Result<MoveCan
     Ok(MoveCandidates::new(sizes.into_iter().flatten().collect(), any_unsized))
 }
 
-/// An album already seated in `folder_id` under this title and year, if any.
+/// An album already seated in `folder_id` under this title, if any.
 ///
 /// Used when no album-artist tag is present so a multi-performer release in one folder does not
-/// split into one row per track artist.
-pub async fn find_album_in_folder_by_name_and_year(
+/// split into one row per track artist. Year is intentionally ignored — tags often disagree.
+pub async fn find_album_in_folder_by_name(
     tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
     name: &str,
-    year: Option<i32>,
     folder_id: i64,
 ) -> Result<Option<(i64, i64)>, AppError> {
     let row = sqlx::query_as::<_, (i64, i64)>(
         "SELECT al.id, al.artist_id
          FROM albums al
          WHERE al.name = ? COLLATE NOCASE
-           AND (al.year IS NOT DISTINCT FROM ?)
            AND EXISTS (
              SELECT 1 FROM tracks t
              WHERE t.album_id = al.id AND t.folder_id = ?
@@ -122,7 +120,6 @@ pub async fn find_album_in_folder_by_name_and_year(
          LIMIT 1",
     )
     .bind(name)
-    .bind(year)
     .bind(folder_id)
     .fetch_optional(&mut **tx)
     .await?;

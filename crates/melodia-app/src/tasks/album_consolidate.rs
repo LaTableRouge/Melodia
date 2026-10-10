@@ -13,9 +13,9 @@ pub fn spawn(spawner: &TaskSpawner, state: &AppState) {
         state,
         one_shot::Sweep {
             label: "Album folder consolidation",
-            marker: "albums_consolidated_by_folder",
-            done: |flags| flags.albums_consolidated_by_folder,
-            mark: |flags| flags.albums_consolidated_by_folder = true,
+            marker: "albums_unified_without_album_artist_v2",
+            done: |flags| flags.albums_unified_without_album_artist_v2,
+            mark: |flags| flags.albums_unified_without_album_artist_v2 = true,
             on_failure: one_shot::OnFailure::Mark,
         },
         |state| async move { consolidate(&state).await },
@@ -27,7 +27,9 @@ async fn consolidate(state: &AppState) -> AppResult<()> {
     let retired = queries::album::consolidate_split_albums_in_folders(&mut tx).await?;
     tx.commit().await?;
     if retired > 0 {
-        log::info!("Album consolidation: merged {retired} duplicate album row(s)");
+        log::info!("Album consolidation: retired {retired} duplicate album row(s)");
+    } else {
+        log::info!("Album consolidation: grid artists aligned to first track where album-artist was empty");
     }
     Ok(())
 }
