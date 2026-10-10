@@ -42,6 +42,10 @@ export component AlbumGrid inherits Rectangle {
     out property <length> v-offset: -list.viewport-y;
     callback set-v-offset(length);
     set-v-offset(o) => { list.viewport-y = -o; }
+    // Wheel and trackpad scroll bypass the host scrollbar; the host persists offset here.
+    callback v-offset-changed(length);
+    property <length> scroll-pos: -list.viewport-y;
+    changed scroll-pos => { root.v-offset-changed(root.scroll-pos); }
 
     list := ListView {
         vertical-scrollbar-policy: always-off;
